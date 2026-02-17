@@ -16,6 +16,7 @@ export const COURIER_CONFIG: CourierConfig[] = [
     { id: 'shipyaari', name: 'Shipyaari', enabled: true },
     { id: 'ekart_surface', name: 'Ekart Surface', enabled: true },
     { id: 'ekart_express', name: 'Ekart Express', enabled: true },
+    { id: 'shipway', name: 'Shipway', enabled: true },
 ];
 
 export const getEnabledCouriers = (): CourierConfig[] =>

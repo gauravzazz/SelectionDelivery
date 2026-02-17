@@ -23,6 +23,18 @@ export const STORES: StoreConfig[] = [
         pincode: '110001',
         enabled: true,
     },
+    {
+        id: 'store-sw-1',
+        name: 'Shipway Origin 1',
+        pincode: '741235',
+        enabled: true,
+    },
+    {
+        id: 'store-sw-2',
+        name: 'Shipway Origin 2',
+        pincode: '411030',
+        enabled: true,
+    },
 ];
 
 export const getEnabledStores = (): StoreConfig[] =>

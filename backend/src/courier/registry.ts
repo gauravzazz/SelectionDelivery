@@ -9,6 +9,7 @@ import { BluedartAdapter } from './adapters/bluedart';
 import { DtdcAdapter } from './adapters/dtdc';
 import { ShipyaariAdapter } from './adapters/shipyaari';
 import { EkartAdapter } from './adapters/ekart';
+import { ShipwayAdapter } from './adapters/shipway';
 
 /** Master list — add new courier adapters here */
 const ALL_ADAPTERS: CourierAdapter[] = [
@@ -18,6 +19,7 @@ const ALL_ADAPTERS: CourierAdapter[] = [
     new ShipyaariAdapter(),
     new EkartAdapter('SURFACE'),
     new EkartAdapter('EXPRESS'),
+    new ShipwayAdapter(),
 ];
 
 /**
