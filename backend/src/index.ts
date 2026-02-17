@@ -5,6 +5,7 @@ import app from "./app";
 export const api = onRequest({
     region: "us-central1", // Match your Firebase project region
     memory: "256MiB",
+    maxInstances: 10,
     timeoutSeconds: 60,
     cors: true,
 }, app);
