@@ -2,6 +2,12 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import './App.css';
 import ShippingForm, { FormData } from './components/ShippingForm';
 import QuoteResults from './components/QuoteResults';
+import BookList from './components/BookList';
+import CartPage from './components/CartPage';
+import OrderFlow from './components/OrderFlow';
+import OrdersPage from './components/OrdersPage';
+import MessagesPage from './components/MessagesPage';
+import { useBookContext } from './context/BookContext';
 import {
     fetchDropdownOptions,
     fetchShippingQuote,
@@ -9,29 +15,58 @@ import {
     QuoteResponse,
 } from './api/shippingApi';
 import { calculateWeight, WeightResult } from './engine/weightCalculator';
+import { OrderItem } from './api/orderApi';
 
 function App() {
-    const [options, setOptions] = useState<DropdownOptions | null>(null);
+    // Hardcoded fallback options so Calculator loads instantly
+    const FALLBACK_OPTIONS: DropdownOptions = {
+        pageSizes: ['A4', 'A3', 'A5', 'Letter'],
+        gsmOptions: ['70', '80', '100', '130'],
+        bindingTypes: ['none', 'spiral', 'perfect', 'hardbound'],
+        packagingTypes: ['standard', 'reinforced'],
+        printSides: ['single', 'double'],
+        pageSizeBaseWeight: { A4: 5, A3: 8, A5: 3, Letter: 5 },
+        gsmMultiplier: { '70': 0.9, '80': 1.0, '100': 1.25, '130': 1.6 },
+        bindingWeight: { none: 0, spiral: 120, perfect: 180, hardbound: 350 },
+        packagingWeight: { standard: 150, reinforced: 300 },
+        couriers: [],
+    };
+
+    const [options, setOptions] = useState<DropdownOptions>(FALLBACK_OPTIONS);
     const [result, setResult] = useState<QuoteResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [optionsError, setOptionsError] = useState(false);
+
+    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages'>('catalog');
+    const { cartItemCount } = useBookContext();
+
+    // Order flow data passed from CartPage
+    const [orderFlowData, setOrderFlowData] = useState<{
+        items: OrderItem[];
+        booksTotal: number;
+        shippingCharge: number;
+        courierName: string;
+        adjustment: number;
+        adjustmentType: 'discount' | 'markup';
+        grandTotal: number;
+        weightGrams: number;
+    } | null>(null);
 
     // Current form values for live weight preview
     const [currentForm, setCurrentForm] = useState({
         pageCount: 10,
         printSide: 'double' as const,
         pageSize: 'A4',
-        gsm: '80',
-        bindingType: 'none',
+        gsm: '70',
+        bindingType: 'spiral',
         packagingType: 'standard',
     });
 
-    // Load dropdown options + weight config from backend
+    // Try to load options from backend (enhances defaults with courier list)
     useEffect(() => {
         fetchDropdownOptions()
             .then(setOptions)
-            .catch(() => setOptionsError(true));
+            .catch(() => { }); // Silently fall back to hardcoded defaults
     }, []);
 
     // Live weight calculation on the frontend
@@ -97,66 +132,95 @@ function App() {
         [options],
     );
 
-    if (optionsError) {
-        return (
-            <div className="app-container">
-                <div className="error-screen">
-                    <div className="error-icon">⚠️</div>
-                    <h2>Couldn't connect to server</h2>
-                    <p>Make sure the backend is running on port 4000.</p>
-                    <button className="retry-btn" onClick={() => window.location.reload()}>
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!options) {
-        return (
-            <div className="app-container">
-                <div className="loading-screen">
-                    <div className="loader" />
-                    <p>Loading configuration…</p>
-                </div>
-            </div>
-        );
-    }
+    const handleCreateOrder = (data: typeof orderFlowData) => {
+        setOrderFlowData(data);
+        setMode('order-flow');
+    };
 
     return (
         <div className="app-container">
+            <header className="app-header">
+                <div className="logo">OnlinePrintout.com</div>
+                <nav className="app-nav">
+                    <button
+                        className={mode === 'calculator' ? 'active' : ''}
+                        onClick={() => setMode('calculator')}
+                    >
+                        🖩
+                    </button>
+                    <button
+                        className={mode === 'catalog' ? 'active' : ''}
+                        onClick={() => setMode('catalog')}
+                    >
+                        📚
+                    </button>
+                    <button
+                        className={`cart-btn ${mode === 'cart' ? 'active' : ''}`}
+                        onClick={() => setMode('cart')}
+                    >
+                        🛒 <span className="cart-badge">{cartItemCount}</span>
+                    </button>
+                    <button
+                        className={mode === 'orders' ? 'active' : ''}
+                        onClick={() => setMode('orders')}
+                    >
+                        📋
+                    </button>
+                    <button
+                        className={mode === 'messages' ? 'active' : ''}
+                        onClick={() => setMode('messages')}
+                    >
+                        💬
+                    </button>
+                </nav>
+            </header>
+
             <main className="app-main">
-                <ShippingForm
-                    pageSizes={options.pageSizes}
-                    gsmOptions={options.gsmOptions}
-                    bindingTypes={options.bindingTypes}
-                    packagingTypes={options.packagingTypes}
-                    couriers={options.couriers}
-                    weight={liveWeight}
-                    loading={loading}
-                    onSubmit={handleSubmit}
-                    onFieldChange={handleFieldChange}
-                />
+                {mode === 'calculator' ? (
+                    <>
+                        <ShippingForm
+                            pageSizes={options.pageSizes}
+                            gsmOptions={options.gsmOptions}
+                            bindingTypes={options.bindingTypes}
+                            packagingTypes={options.packagingTypes}
+                            couriers={options.couriers}
+                            weight={liveWeight}
+                            loading={loading}
+                            onSubmit={handleSubmit}
+                            onFieldChange={handleFieldChange}
+                        />
 
-                {error && (
-                    <div className="error-banner">
-                        <span>❌</span> {error}
-                    </div>
-                )}
+                        {error && (
+                            <div className="error-banner">
+                                <span>❌</span> {error}
+                            </div>
+                        )}
 
-                {result && (
-                    <QuoteResults
-                        cheapest={result.cheapest}
-                        fastest={result.fastest}
-                        allOptions={result.allOptions}
-                        weightGrams={result.weightGrams}
+                        {result && (
+                            <QuoteResults
+                                cheapest={result.cheapest}
+                                fastest={result.fastest}
+                                allOptions={result.allOptions}
+                                weightGrams={result.weightGrams}
+                            />
+                        )}
+                    </>
+                ) : mode === 'catalog' ? (
+                    <BookList />
+                ) : mode === 'cart' ? (
+                    <CartPage onCreateOrder={handleCreateOrder} />
+                ) : mode === 'order-flow' && orderFlowData ? (
+                    <OrderFlow
+                        {...orderFlowData}
+                        onComplete={() => setMode('orders')}
+                        onCancel={() => setMode('cart')}
                     />
+                ) : mode === 'messages' ? (
+                    <MessagesPage />
+                ) : (
+                    <OrdersPage />
                 )}
             </main>
-
-            <footer className="app-footer">
-                PrintShip Engine · Courier-agnostic & multi-store
-            </footer>
         </div>
     );
 }

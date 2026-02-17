@@ -17,4 +17,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
-export { app, analytics };
+// Initialize Firestore with Offline Persistence
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+const db = getFirestore(app);
+
+if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn('Persistence failed: Multiple tabs open');
+        } else if (err.code == 'unimplemented') {
+            console.warn('Persistence not supported by browser');
+        }
+    });
+}
+
+export { app, analytics, db };

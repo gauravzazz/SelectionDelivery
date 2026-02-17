@@ -247,3 +247,29 @@
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
 }
+
+/* ══ Mobile Responsive ══ */
+@media (max-width: 600px) {
+    .shipping-form {
+        max-width: 100%;
+    }
+
+    .form-title {
+        font-size: 1.5rem;
+    }
+
+    .field-row {
+        flex-direction: column;
+        gap: var(--sp-sm);
+    }
+
+    .field-input,
+    .field-select {
+        font-size: 0.9rem;
+    }
+
+    .chip {
+        padding: var(--sp-xxs) var(--sp-sm);
+        font-size: 0.75rem;
+    }
+}

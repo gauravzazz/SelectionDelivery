@@ -4,7 +4,7 @@
  */
 
 import { getEnabledCouriers } from '../../config/couriers';
-import { CourierAdapter, CourierPayload, CourierQuote } from '../types';
+import { CourierAdapter, CourierPayload, CourierQuote, ShipmentPayload, ShipmentResponse } from '../types';
 
 export class DtdcAdapter implements CourierAdapter {
     id = 'dtdc';
@@ -25,6 +25,16 @@ export class DtdcAdapter implements CourierAdapter {
             price,
             deliveryDays,
             available: true,
+        };
+    }
+    async createShipment(payload: ShipmentPayload): Promise<ShipmentResponse> {
+        // Mock shipment creation
+        const mockTrackingId = `DTDC${Math.floor(100000 + Math.random() * 900000)}`;
+        return {
+            trackingId: mockTrackingId,
+            courierName: this.name,
+            labelUrl: `https://www.dtdc.in/label/${mockTrackingId}.pdf`,
+            estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
         };
     }
 }

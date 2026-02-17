@@ -13,14 +13,94 @@
 .app-main {
     flex: 1;
     width: 100%;
-    max-width: 520px;
+    max-width: 960px;
     padding: var(--sp-xl) var(--sp-md) var(--sp-xxl);
     display: flex;
     flex-direction: column;
-    gap: var(--sp-xxl);
+    gap: var(--sp-xl);
 }
 
-/* Loading Screen */
+/* ── Premium Header ── */
+.app-header {
+    width: 100%;
+    max-width: 960px;
+    padding: var(--sp-md) var(--sp-lg);
+    margin-top: var(--sp-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.logo {
+    font-weight: 900;
+    font-size: 1.35rem;
+    background: linear-gradient(135deg, hsl(250, 84%, 64%) 0%, hsl(280, 80%, 65%) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+}
+
+.app-nav {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 4px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.app-nav button {
+    padding: 8px 18px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all 0.25s ease;
+    font-family: var(--font-family);
+}
+
+.app-nav button:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.app-nav button.active {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 2px 12px hsla(250, 84%, 54%, 0.4);
+}
+
+/* Cart Button */
+.cart-btn {
+    position: relative;
+}
+
+.cart-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: hsl(0, 72%, 55%);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-left: 4px;
+    padding: 0 4px;
+}
+
+/* ── Loading Screen ── */
 .loading-screen {
     flex: 1;
     display: flex;
@@ -41,7 +121,7 @@
     animation: spin 0.8s linear infinite;
 }
 
-/* Error Screen */
+/* ── Error Screen ── */
 .error-screen {
     flex: 1;
     display: flex;
@@ -79,7 +159,7 @@
     opacity: 0.85;
 }
 
-/* Error Banner */
+/* ── Error Banner ── */
 .error-banner {
     padding: var(--sp-md);
     background: var(--color-bg-card);
@@ -94,11 +174,65 @@
     width: 100%;
 }
 
-/* Footer */
+/* ── Footer ── */
 .app-footer {
     padding: var(--sp-lg) var(--sp-md);
     text-align: center;
     font-size: 0.75rem;
     color: var(--color-text-muted);
     letter-spacing: 0.03em;
+}
+
+/* ══════════════════════════════════════════
+   Mobile Responsive
+   ══════════════════════════════════════════ */
+
+/* Prevent horizontal overflow globally */
+.app-container {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .app-header {
+        flex-direction: column;
+        gap: var(--sp-sm);
+        padding: var(--sp-sm) var(--sp-md);
+        margin-top: var(--sp-xs);
+        margin-left: var(--sp-xs);
+        margin-right: var(--sp-xs);
+        border-radius: var(--radius-lg);
+        width: calc(100% - var(--sp-md));
+    }
+
+    .logo {
+        font-size: 1.15rem;
+    }
+
+    .app-nav {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .app-nav button {
+        padding: 7px 12px;
+        font-size: 0.78rem;
+        flex: 1;
+        text-align: center;
+    }
+
+    .cart-badge {
+        min-width: 16px;
+        height: 16px;
+        font-size: 0.6rem;
+    }
+
+    .app-main {
+        padding: var(--sp-md) var(--sp-sm) var(--sp-xl);
+        gap: var(--sp-lg);
+    }
+
+    .error-banner {
+        max-width: 100%;
+    }
 }

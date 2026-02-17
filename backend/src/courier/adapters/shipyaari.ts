@@ -4,7 +4,7 @@
  */
 
 import { getEnabledCouriers } from '../../config/couriers';
-import { CourierAdapter, CourierPayload, CourierQuote } from '../types';
+import { CourierAdapter, CourierPayload, CourierQuote, ShipmentPayload, ShipmentResponse } from '../types';
 
 export class ShipyaariAdapter implements CourierAdapter {
     id = 'shipyaari';
@@ -91,5 +91,15 @@ export class ShipyaariAdapter implements CourierAdapter {
                 available: false,
             };
         }
+    }
+    async createShipment(payload: ShipmentPayload): Promise<ShipmentResponse> {
+        // Mock shipment creation for Shipyaari
+        const mockTrackingId = `SHIPYAARI${Math.floor(100000 + Math.random() * 900000)}`;
+        return {
+            trackingId: mockTrackingId,
+            courierName: this.name,
+            labelUrl: `https://shipyaari.com/label/${mockTrackingId}.pdf`,
+            estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        };
     }
 }

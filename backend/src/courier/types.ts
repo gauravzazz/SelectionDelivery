@@ -24,4 +24,37 @@ export interface CourierAdapter {
     name: string;
     isEnabled(): boolean;
     getQuote(payload: CourierPayload): Promise<CourierQuote>;
+    createShipment(payload: ShipmentPayload): Promise<ShipmentResponse>;
+}
+
+export interface ShipmentPayload {
+    orderId: string;
+    courierId: string;
+    pickupAddress: {
+        name: string;
+        phone: string;
+        pincode: string;
+        address: string;
+    };
+    deliveryAddress: {
+        name: string;
+        phone: string;
+        pincode: string;
+        address: string;
+    };
+    items: {
+        title: string;
+        quantity: number;
+        price: number;
+    }[];
+    weightGrams: number;
+    paymentMethod: 'prepaid' | 'cod';
+    amount: number;
+}
+
+export interface ShipmentResponse {
+    trackingId: string;
+    courierName: string;
+    labelUrl?: string; // URL to download shipping label
+    estimatedDelivery?: string;
 }

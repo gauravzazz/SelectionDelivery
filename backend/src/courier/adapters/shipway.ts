@@ -3,7 +3,7 @@
  */
 
 import { getEnabledCouriers } from '../../config/couriers';
-import { CourierAdapter, CourierPayload, CourierQuote } from '../types';
+import { CourierAdapter, CourierPayload, CourierQuote, ShipmentPayload, ShipmentResponse } from '../types';
 
 export class ShipwayAdapter implements CourierAdapter {
     id = 'shipway';
@@ -107,5 +107,15 @@ export class ShipwayAdapter implements CourierAdapter {
                 available: false,
             };
         }
+    }
+    async createShipment(payload: ShipmentPayload): Promise<ShipmentResponse> {
+        // Mock shipment creation
+        const mockTrackingId = `SHIPWAY${Math.floor(100000 + Math.random() * 900000)}`;
+        return {
+            trackingId: mockTrackingId,
+            courierName: this.name,
+            labelUrl: `https://shipway.in/label/${mockTrackingId}.pdf`,
+            estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        };
     }
 }

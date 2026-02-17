@@ -6,6 +6,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import quoteRouter from './routes/quote';
+import shipmentRouter from './routes/shipment';
+import addressRouter from './routes/address';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -20,6 +22,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/shipping-quote', quoteRouter);
+app.use('/api/shipment', shipmentRouter);
+app.use('/api/address', addressRouter);
 
 // Health check
 app.get('/health', (_req, res) => {

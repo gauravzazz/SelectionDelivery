@@ -1,0 +1,369 @@
+/* ── Orders Page ── */
+.quick-actions-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+}
+
+.qa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.template-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+
+.template-preview {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: pre-wrap;
+    flex: 1;
+}
+
+.template-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.template-edit-mode textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.btn-text-small {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.btn-save-mini {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    width: 100%;
+}
+
+.orders-page {
+    width: 100%;
+}
+
+.orders-page>h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: var(--sp-lg);
+    background: linear-gradient(135deg, #fff 0%, hsl(250, 84%, 74%) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.orders-loading,
+.orders-empty {
+    text-align: center;
+    padding: var(--sp-xxl) var(--sp-lg);
+    color: var(--color-text-muted);
+}
+
+.orders-empty .empty-icon {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: var(--sp-sm);
+}
+
+/* Section Labels */
+.order-section {
+    margin-bottom: var(--sp-xl);
+}
+
+.section-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 var(--sp-md) 0;
+    padding-bottom: var(--sp-xs);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.section-label.draft-label {
+    color: hsl(38, 92%, 55%);
+}
+
+.section-label.confirmed-label {
+    color: var(--color-success);
+}
+
+/* Order Card */
+.order-card {
+    padding: var(--sp-lg);
+    margin-bottom: var(--sp-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    transition: border-color 0.2s;
+}
+
+.order-card.draft {
+    border-left: 3px solid hsl(38, 92%, 55%);
+}
+
+.order-card.confirmed {
+    border-left: 3px solid var(--color-success);
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--sp-sm);
+}
+
+.order-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    margin-right: var(--sp-sm);
+}
+
+.order-date {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.status-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.status-badge.draft {
+    background: hsla(38, 92%, 55%, 0.15);
+    color: hsl(38, 92%, 55%);
+}
+
+.status-badge.confirmed {
+    background: hsla(160, 84%, 44%, 0.15);
+    color: var(--color-success);
+}
+
+/* Card Body */
+.order-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+}
+
+.order-detail {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.order-total {
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.order-address {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    padding: var(--sp-xs) 0;
+}
+
+.order-notes {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Tracking Info */
+.tracking-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sp-xs) var(--sp-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--sp-xs);
+}
+
+.track-link {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.track-link:hover {
+    text-decoration: underline;
+}
+
+/* Card Actions */
+.order-card-actions {
+    display: flex;
+    gap: var(--sp-sm);
+    margin-top: var(--sp-md);
+    align-items: center;
+}
+
+.order-card-actions.share-row {
+    padding-top: var(--sp-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-confirm {
+    flex: 1;
+    padding: 10px 16px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: var(--font-family);
+    transition: all 0.2s;
+}
+
+.btn-confirm:hover {
+    opacity: 0.9;
+}
+
+.btn-cancel {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: var(--font-family);
+}
+
+.btn-delete {
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 80, 80, 0.2);
+    color: hsl(0, 72%, 55%);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover {
+    background: hsla(0, 72%, 55%, 0.1);
+}
+
+/* Confirm Section */
+.confirm-section {
+    margin-top: var(--sp-md);
+    padding-top: var(--sp-md);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+}
+
+.confirm-section h5 {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.confirm-section input {
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+    font-size: 0.88rem;
+    outline: none;
+}
+
+.confirm-section input:focus {
+    border-color: var(--color-primary);
+}
+
+.confirm-actions {
+    display: flex;
+    gap: var(--sp-sm);
+}
+
+/* Share buttons (reuse from CartPage) */
+.orders-page .share-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: var(--font-family);
+    transition: all 0.2s;
+}
+
+.orders-page .share-btn.whatsapp {
+    background: hsl(142, 70%, 45%);
+    color: white;
+}
+
+.orders-page .share-btn.telegram {
+    background: hsl(200, 100%, 40%);
+    color: white;
+}
+
+.orders-page .share-btn:active {
+    transform: scale(0.97);
+}

@@ -41,9 +41,9 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
         destinationPincode: '',
         pageCount: 10,
         pageSize: pageSizes[0] || 'A4',
-        gsm: gsmOptions[1] || '80',
+        gsm: '70',
         printSide: 'double',
-        bindingType: bindingTypes[0] || 'none',
+        bindingType: 'spiral',
         packagingType: 'standard',
         selectedCouriers: couriers.filter((c) => c.enabled).map((c) => c.id),
     });
@@ -74,12 +74,6 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
 
     return (
         <form className="shipping-form" onSubmit={handleSubmit}>
-            <div className="form-header">
-                <div className="form-icon">📦</div>
-                <h1 className="form-title">PrintShip</h1>
-                <p className="form-subtitle">Smart shipping calculator for print orders</p>
-            </div>
-
             {/* Destination */}
             <div className="field-group">
                 <label className="field-label">Destination Pincode</label>

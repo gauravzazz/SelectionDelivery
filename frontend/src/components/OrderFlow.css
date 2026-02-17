@@ -1,0 +1,301 @@
+/* ── Order Flow ── */
+.order-flow {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-md);
+}
+
+.flow-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+}
+
+.flow-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.back-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+}
+
+/* Mini summary */
+.order-summary-mini {
+    padding: var(--sp-md) var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.mini-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+}
+
+.mini-row span:last-child {
+    color: var(--color-accent);
+}
+
+/* Paste section */
+.paste-section {
+    padding: var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.paste-section h4 {
+    margin: 0 0 var(--sp-xs) 0;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.hint-text {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin: 0 0 var(--sp-md) 0;
+}
+
+.address-textarea {
+    width: 100%;
+    padding: var(--sp-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    margin-bottom: var(--sp-md);
+}
+
+.address-textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.address-textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+/* Primary button */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-family: var(--font-family);
+    transition: all 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
+    box-shadow: var(--shadow-btn);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Address form */
+.address-form {
+    padding: var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.address-form h4 {
+    margin: 0 0 var(--sp-md) 0;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.addr-field {
+    margin-bottom: var(--sp-sm);
+}
+
+.addr-field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.addr-field input,
+.addr-field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.addr-field input:focus,
+.addr-field textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.addr-row {
+    display: flex;
+    gap: var(--sp-sm);
+}
+
+.addr-row .addr-field {
+    flex: 1;
+}
+
+/* Review summary */
+.order-review-summary {
+    padding: var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.order-review-summary h4 {
+    margin: 0 0 var(--sp-md) 0;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.review-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+}
+
+.review-item span:last-child {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.review-item.discount span:last-child {
+    color: var(--color-success);
+}
+
+.review-item.markup span:last-child {
+    color: var(--color-warning);
+}
+
+.review-item.grand {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.review-item.grand span:last-child {
+    color: var(--color-accent);
+}
+
+.review-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: var(--sp-sm) 0;
+}
+
+/* Notes */
+.notes-section {
+    padding: var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.notes-section h4 {
+    margin: 0 0 var(--sp-sm) 0;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.notes-section textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+    font-size: 0.9rem;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.save-order-btn {
+    margin-top: var(--sp-sm);
+}
+
+/* Success */
+.order-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--sp-xxl) var(--sp-lg);
+    gap: var(--sp-sm);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.success-icon {
+    font-size: 3rem;
+}
+
+.order-success h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+}
+
+.order-success p {
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .addr-row {
+        flex-direction: column;
+    }
+}

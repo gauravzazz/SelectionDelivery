@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Books collection - open for now (admin auth can be added later)
+    match /books/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Orders collection - open for now
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
