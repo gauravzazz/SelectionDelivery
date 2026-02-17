@@ -45,7 +45,7 @@ export interface DropdownOptions {
     couriers: CourierInfo[];
 }
 
-const API_BASE = 'http://127.0.0.1:4000/api/shipping-quote';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:4000/api/shipping-quote';
 
 export async function fetchShippingQuote(
     req: QuoteRequest,
