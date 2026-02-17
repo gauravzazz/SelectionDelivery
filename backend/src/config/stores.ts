@@ -25,13 +25,13 @@ export const STORES: StoreConfig[] = [
     },
     {
         id: 'store-sw-1',
-        name: 'Shipway Origin 1',
+        name: 'Kolkata Hub',
         pincode: '741235',
         enabled: true,
     },
     {
         id: 'store-sw-2',
-        name: 'Shipway Origin 2',
+        name: 'Pune Hub',
         pincode: '411030',
         enabled: true,
     },
