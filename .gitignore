@@ -1,0 +1,32 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+.firebase/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs and PIDs
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/backend.log
+backend/backend.pid
+frontend/frontend.log
+frontend/frontend.pid
+frontend/preview.log

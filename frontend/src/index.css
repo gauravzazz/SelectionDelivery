@@ -1,0 +1,94 @@
+/* ── Global Resets & CSS Custom Properties ── */
+:root {
+  /* brand */
+  --color-primary: hsl(250, 84%, 54%);
+  --color-primary-light: hsl(250, 84%, 64%);
+  --color-primary-dark: hsl(250, 84%, 44%);
+  --color-accent: hsl(160, 84%, 44%);
+  --color-accent-light: hsl(160, 84%, 54%);
+
+  /* surfaces */
+  --color-bg-base: hsl(230, 25%, 8%);
+  --color-bg-card: hsl(230, 22%, 12%);
+  --color-bg-card-hover: hsl(230, 22%, 15%);
+  --color-bg-input: hsl(230, 20%, 16%);
+  --color-bg-glass: hsla(230, 30%, 18%, 0.65);
+
+  /* borders */
+  --color-border: hsla(230, 30%, 40%, 0.25);
+  --color-border-focus: hsl(250, 84%, 54%);
+
+  /* text */
+  --color-text-primary: hsl(0, 0%, 96%);
+  --color-text-secondary: hsl(230, 15%, 65%);
+  --color-text-muted: hsl(230, 10%, 50%);
+
+  /* semantic */
+  --color-success: hsl(160, 84%, 44%);
+  --color-success-bg: hsla(160, 84%, 44%, 0.12);
+  --color-warning: hsl(38, 92%, 50%);
+  --color-warning-bg: hsla(38, 92%, 50%, 0.12);
+
+  /* spacing */
+  --sp-xxs: 0.25rem;
+  --sp-xs: 0.5rem;
+  --sp-sm: 0.75rem;
+  --sp-md: 1rem;
+  --sp-lg: 1.5rem;
+  --sp-xl: 2rem;
+  --sp-xxl: 3rem;
+
+  /* radii */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  /* shadows */
+  --shadow-card: 0 4px 24px hsla(0, 0%, 0%, 0.35);
+  --shadow-glow: 0 0 32px hsla(250, 84%, 54%, 0.25);
+  --shadow-btn: 0 2px 12px hsla(250, 84%, 54%, 0.35);
+
+  /* typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  line-height: 1.6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--color-bg-base);
+}
+
+/* ── Utility Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
