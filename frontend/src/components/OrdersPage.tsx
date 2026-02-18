@@ -563,14 +563,7 @@ const OrdersPage: React.FC = () => {
         return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     };
 
-    if (loading) {
-        return (
-            <div className="orders-page">
-                <h3>📋 Orders</h3>
-                <div className="orders-loading">Loading orders...</div>
-            </div>
-        );
-    }
+
 
     const drafts = orders.filter(o => o.status === 'draft');
     const confirmed = orders.filter(o => o.status === 'confirmed');
@@ -616,6 +609,15 @@ const OrdersPage: React.FC = () => {
                 }),
         [drafts, followUpHours, nowTick],
     );
+
+    if (loading) {
+        return (
+            <div className="orders-page">
+                <h3>📋 Orders</h3>
+                <div className="orders-loading">Loading orders...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="orders-page">
