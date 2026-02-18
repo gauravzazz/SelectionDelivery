@@ -3,7 +3,6 @@ import { Order, OrderService } from '../api/orderApi';
 import { fetchShippingQuote, QuoteResponse, createShipment } from '../api/shippingApi';
 import CourierModal from './CourierModal';
 import OrderDetailModal from './OrderDetailModal';
-import MessageManager from './MessageManager';
 import './OrdersPage.css';
 
 const OrdersPage: React.FC = () => {
