@@ -60,6 +60,12 @@
     letter-spacing: 0.05em;
 }
 
+.field-inline-error {
+    color: hsl(0, 72%, 60%);
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+
 /* Inputs */
 .field-input,
 .field-select {

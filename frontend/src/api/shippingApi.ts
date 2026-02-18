@@ -60,12 +60,68 @@ const cleanBaseUrl = (url?: string) => {
     return cleaned.replace(/\/$/, '') || '/api';
 };
 
-const API_ROOT = cleanBaseUrl(import.meta.env.VITE_API_BASE_URL);
+const unique = (values: string[]) => Array.from(new Set(values));
+
+const buildApiRoots = (raw?: string): string[] => {
+    const primary = cleanBaseUrl(raw);
+    const roots = [primary];
+
+    // Support direct function URLs and proxied /api URLs seamlessly.
+    if (primary.endsWith('/api')) {
+        const withoutApi = primary.slice(0, -'/api'.length) || '';
+        roots.push(withoutApi);
+    } else {
+        roots.push(`${primary}/api`);
+    }
+
+    return unique(roots.map((r) => r.replace(/\/$/, '')));
+};
+
+const DEFAULT_PROD_API_BASE = 'https://api-v4k6yqu5ia-uc.a.run.app';
+const API_ROOTS = buildApiRoots(
+    import.meta.env.VITE_API_BASE_URL ||
+    (import.meta.env.DEV ? '/api' : DEFAULT_PROD_API_BASE),
+);
+
+async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+    let lastResponse: Response | null = null;
+    let lastError: unknown = null;
+
+    for (const root of API_ROOTS) {
+        const url = `${root}${path}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+            const res = await fetch(url, { ...(init || {}), signal: controller.signal });
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            const isJson = contentType.includes('application/json');
+
+            if (res.ok && isJson) return res;
+
+            // Keep trying fallback roots when route likely mismatched.
+            if (res.status === 404 || res.status === 405 || (res.ok && !isJson)) {
+                lastResponse = res;
+                continue;
+            }
+
+            // Non-route errors (400/401/500 etc.) should surface immediately.
+            return res;
+        } catch (error) {
+            lastError = error;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    if (lastResponse) return lastResponse;
+    if (lastError instanceof Error) throw lastError;
+    throw new Error('Failed to reach shipping API');
+}
 
 export async function fetchShippingQuote(
     req: QuoteRequest,
 ): Promise<QuoteResponse> {
-    const res = await fetch(`${API_ROOT}/shipping-quote`, {
+    const res = await fetchApi('/shipping-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
@@ -79,7 +135,7 @@ export async function fetchShippingQuote(
 
 export async function fetchDropdownOptions(): Promise<DropdownOptions> {
     // Add timestamp to bust cache (fix for sticky Firebase Hosting rewrites)
-    const res = await fetch(`${API_ROOT}/shipping-quote/options?_t=${Date.now()}`);
+    const res = await fetchApi(`/shipping-quote/options?_t=${Date.now()}`);
     if (!res.ok) throw new Error('Failed to load options');
     return res.json();
 }
@@ -94,7 +150,7 @@ export interface ShipmentResponse {
 }
 
 export const createShipment = async (orderId: string, courierId: string): Promise<ShipmentResponse> => {
-    const response = await fetch(`${API_ROOT}/shipment/create`, {
+    const response = await fetchApi('/shipment/create', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -25,6 +25,11 @@ app.use('/api/shipping-quote', quoteRouter);
 app.use('/api/shipment', shipmentRouter);
 app.use('/api/address', addressRouter);
 
+// Compatibility routes for direct Function URL usage where '/api' prefix is not present.
+app.use('/shipping-quote', quoteRouter);
+app.use('/shipment', shipmentRouter);
+app.use('/address', addressRouter);
+
 // Health check
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'Print Shipping Engine' });

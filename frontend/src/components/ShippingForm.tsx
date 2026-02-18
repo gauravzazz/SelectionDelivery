@@ -37,6 +37,8 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
     onSubmit,
     onFieldChange,
 }) => {
+    const [localError, setLocalError] = React.useState<string>('');
+
     const enabledCourierIds = React.useMemo(
         () => couriers.filter((c) => c.enabled).map((c) => c.id),
         [couriers],
@@ -79,6 +81,11 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!/^\d{6}$/.test(form.destinationPincode)) {
+            setLocalError('Enter a valid 6-digit pincode');
+            return;
+        }
+        setLocalError('');
         onSubmit(form);
     };
 
@@ -98,9 +105,13 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                     maxLength={6}
                     placeholder="e.g. 400001"
                     value={form.destinationPincode}
-                    onChange={(e) => updateField('destinationPincode', e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                        setLocalError('');
+                        updateField('destinationPincode', e.target.value.replace(/\D/g, ''));
+                    }}
                     required
                 />
+                {localError && <span className="field-inline-error">{localError}</span>}
             </div>
 
             {/* Pages + Print Side */}
@@ -255,7 +266,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                 id="submitQuote"
                 type="submit"
                 className="submit-btn"
-                disabled={loading || form.destinationPincode.length !== 6}
+                disabled={loading}
             >
                 {loading ? (
                     <span className="btn-spinner" />

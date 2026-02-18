@@ -118,6 +118,10 @@ function App() {
     const handleSubmit = useCallback(
         async (data: FormData) => {
             if (!options) return;
+            if (!/^\d{6}$/.test(data.destinationPincode)) {
+                setError('Destination pincode must be 6 digits');
+                return;
+            }
 
             // Calculate weight on frontend
             const weight = calculateWeight(
@@ -136,6 +140,10 @@ function App() {
                     packagingWeight: options.packagingWeight,
                 },
             );
+            if (weight.totalWeightGrams <= 0) {
+                setError('Calculated weight is invalid. Check print inputs.');
+                return;
+            }
 
             setLoading(true);
             setError(null);
