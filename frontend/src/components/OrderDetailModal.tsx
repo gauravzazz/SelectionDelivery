@@ -54,6 +54,11 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
         }
     };
 
+    const handleSendTelegram = () => {
+        if (!messageText) return;
+        window.open(`https://t.me/share/url?url=.&text=${encodeURIComponent(messageText)}`, '_blank');
+    };
+
     if (!isOpen || !order) return null;
 
     return (
@@ -94,8 +99,16 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
                                 <strong>₹{order.grandTotal}</strong>
                             </div>
                             <div className="payment-row">
-                                <span>Status</span>
+                                <span>Stage</span>
+                                <span>{order.stage}</span>
+                            </div>
+                            <div className="payment-row">
+                                <span>Order</span>
                                 <span className={`status-badge ${order.status}`}>{order.status}</span>
+                            </div>
+                            <div className="payment-row">
+                                <span>Payment</span>
+                                <span className={`status-badge ${order.paymentStatus}`}>{order.paymentStatus}</span>
                             </div>
                         </div>
                     </div>
@@ -130,6 +143,9 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
                                 <div className="message-toolbar">
                                     <button className="btn-whatsapp" onClick={handleSendMessage} disabled={!messageText}>
                                         Share on WhatsApp ✈️
+                                    </button>
+                                    <button className="btn-whatsapp telegram-btn" onClick={handleSendTelegram} disabled={!messageText}>
+                                        Share on Telegram
                                     </button>
                                 </div>
                             </div>

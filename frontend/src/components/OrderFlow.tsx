@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MessageService, MessageTemplate } from '../api/messageApi';
 import { OrderService, OrderAddress, OrderItem, parseAddress } from '../api/orderApi';
+import { fetchShippingQuote, QuoteResponse } from '../api/shippingApi';
+import CourierModal from './CourierModal';
 import './OrderFlow.css';
 
 interface OrderFlowProps {
@@ -7,6 +10,7 @@ interface OrderFlowProps {
     booksTotal: number;
     shippingCharge: number;
     courierName: string;
+    selectedCourierId?: string;
     adjustment: number;
     adjustmentType: 'discount' | 'markup';
     grandTotal: number;
@@ -21,18 +25,143 @@ interface OrderFlowProps {
     onCancel: () => void;
 }
 
+function replaceTemplateTokens(template: string, tokens: Record<string, string>): string {
+    return Object.entries(tokens).reduce(
+        (acc, [key, value]) => acc.replace(new RegExp(`\\{${key}\\}`, 'g'), value),
+        template,
+    );
+}
+
 const OrderFlow: React.FC<OrderFlowProps> = ({
-    items, booksTotal, shippingCharge, courierName,
-    adjustment, adjustmentType, grandTotal, weightGrams,
-    address, setAddress, notes, setNotes, rawText, setRawText,
-    onComplete, onCancel,
+    items,
+    booksTotal,
+    shippingCharge,
+    courierName,
+    selectedCourierId,
+    adjustment,
+    adjustmentType,
+    grandTotal,
+    weightGrams,
+    address,
+    setAddress,
+    notes,
+    setNotes,
+    rawText,
+    setRawText,
+    onComplete,
+    onCancel,
 }) => {
-    const [step, setStep] = useState<'paste' | 'review' | 'done'>('paste');
+    const [step, setStep] = useState<'paste' | 'review' | 'done'>(() =>
+        address.fullAddress ? 'review' : 'paste',
+    );
     const [saving, setSaving] = useState(false);
     const [parsing, setParsing] = useState(false);
+    const [shippingLoading, setShippingLoading] = useState(false);
+    const [shippingQuotes, setShippingQuotes] = useState<QuoteResponse | null>(null);
+    const [showCourierModal, setShowCourierModal] = useState(false);
+    const [selectedCourier, setSelectedCourier] = useState<QuoteResponse['allOptions'][0] | null>(
+        selectedCourierId && shippingCharge > 0
+            ? {
+                courierId: selectedCourierId,
+                courierName,
+                price: shippingCharge,
+                deliveryDays: 0,
+                available: true,
+                storePincode: '',
+                storeName: '',
+            }
+            : null,
+    );
+    const [quotedPincode, setQuotedPincode] = useState(address.pincode || '');
+    const [isPaid, setIsPaid] = useState(false);
+    const [paymentMode, setPaymentMode] = useState<'upi' | 'cash' | 'bank' | 'other'>('upi');
+    const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+    useEffect(() => {
+        const loadTemplates = async () => {
+            try {
+                const data = await MessageService.getAll();
+                setTemplates(data);
+            } catch (error) {
+                console.error('Failed to load templates', error);
+            }
+        };
+        loadTemplates();
+    }, []);
+
+    const activeShipping = useMemo(() => {
+        if (selectedCourier) {
+            return {
+                courierId: selectedCourier.courierId,
+                courierName: selectedCourier.courierName,
+                charge: selectedCourier.price,
+            };
+        }
+        return {
+            courierId: selectedCourierId,
+            courierName,
+            charge: shippingCharge,
+        };
+    }, [selectedCourier, selectedCourierId, courierName, shippingCharge]);
+
+    const recomputedGrandTotal = useMemo(() => {
+        if (adjustmentType === 'markup') {
+            return Math.max(0, Math.round(booksTotal + activeShipping.charge + Math.abs(adjustment)));
+        }
+        return Math.max(0, Math.round(booksTotal + activeShipping.charge - Math.abs(adjustment)));
+    }, [booksTotal, activeShipping.charge, adjustment, adjustmentType]);
+
+    const generateSummaryMessage = () => {
+        let msg = `*Draft Order Summary*\n\n`;
+        items.forEach((item, idx) => {
+            const mode = item.variant === 'color' ? 'Color' : 'B&W';
+            msg += `${idx + 1}. ${item.title} [${mode}] x${item.quantity} = ₹${item.unitPrice * item.quantity}\n`;
+        });
+        msg += `\n*Books Total*: ₹${booksTotal}`;
+        msg += `\n*Shipping*: ₹${activeShipping.charge} (${activeShipping.courierName || 'TBD'})`;
+        if (adjustment > 0 && adjustmentType === 'discount') {
+            msg += `\n*Discount*: -₹${adjustment}`;
+        }
+        if (adjustment > 0 && adjustmentType === 'markup') {
+            msg += `\n*Markup*: +₹${adjustment}`;
+        }
+        msg += `\n*Grand Total*: ₹${recomputedGrandTotal}`;
+        if (address.name) msg += `\n*Customer*: ${address.name}`;
+        if (address.pincode) msg += `\n*Pincode*: ${address.pincode}`;
+        msg += `\n*Payment*: ${isPaid ? 'Paid' : 'Pending'} (${paymentMode.toUpperCase()})`;
+        return msg;
+    };
+
+    const getMessageToShare = () => {
+        const summary = generateSummaryMessage();
+        const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
+        if (!selectedTemplate) return encodeURIComponent(summary);
+
+        const templated = replaceTemplateTokens(selectedTemplate.text, {
+            name: address.name || 'Customer',
+            grandTotal: recomputedGrandTotal.toString(),
+            trackingCourier: activeShipping.courierName || '',
+            trackingId: '',
+            trackingLink: '',
+        });
+
+        return encodeURIComponent(`${templated}\n\n${summary}`);
+    };
+
+    const shareWhatsApp = () => {
+        window.open(`https://wa.me/?text=${getMessageToShare()}`, '_blank');
+    };
+
+    const shareTelegram = () => {
+        window.open(`https://t.me/share/url?url=.&text=${getMessageToShare()}`, '_blank');
+    };
 
     const handleParse = async () => {
-        if (!rawText.trim()) return;
+        if (!rawText.trim()) {
+            setStep('review');
+            return;
+        }
         setParsing(true);
         try {
             const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -44,45 +173,80 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             const data = await res.json();
 
             if (data.success && data.parsed) {
-                setAddress(prev => ({ ...prev, ...data.parsed }));
+                setAddress((prev) => ({ ...prev, ...data.parsed }));
                 setStep('review');
-            } else {
-                // Fallback to regex if API fails
-                console.warn('AI parse failed, falling back to regex');
-                const parsed = parseAddress(rawText);
-                setAddress(prev => ({ ...prev, ...parsed }));
-                setStep('review');
+                return;
             }
         } catch (err) {
             console.error('Parse error:', err);
-            // Fallback to regex
-            const parsed = parseAddress(rawText);
-            setAddress(prev => ({ ...prev, ...parsed }));
-            setStep('review');
         } finally {
             setParsing(false);
+        }
+
+        const parsed = parseAddress(rawText);
+        setAddress((prev) => ({ ...prev, ...parsed }));
+        setStep('review');
+    };
+
+    const recalculateShipping = async () => {
+        if (!address.pincode || !/^\d{6}$/.test(address.pincode)) {
+            alert('Enter valid 6-digit pincode to fetch shipping.');
+            return;
+        }
+        setShippingLoading(true);
+        try {
+            const quote = await fetchShippingQuote({
+                destinationPincode: address.pincode,
+                weightGrams,
+            });
+            setShippingQuotes(quote);
+            if (quote.allOptions.length > 0) {
+                setSelectedCourier(quote.cheapest);
+                setShowCourierModal(true);
+                setQuotedPincode(address.pincode);
+            }
+        } catch (error) {
+            console.error('Shipping quote failed', error);
+            alert('Failed to fetch shipping options for this pincode.');
+        } finally {
+            setShippingLoading(false);
         }
     };
 
     const handleSaveDraft = async () => {
-        if (!address.name || !address.phone || !address.fullAddress) {
-            alert('Please fill Name, Phone and Address');
+        if (!address.name || !address.phone || !address.fullAddress || !address.pincode) {
+            alert('Please fill Name, Phone, Pincode and Full Address');
             return;
         }
         setSaving(true);
         try {
-            await OrderService.createDraft({
+            const hasShipping = Boolean(activeShipping.courierName && activeShipping.courierName !== 'TBD');
+            const stage = isPaid
+                ? 'paid'
+                : hasShipping
+                    ? 'awaiting_payment'
+                    : 'address_captured';
+            const draftPayload: Parameters<typeof OrderService.createDraft>[0] = {
                 items,
                 address,
                 booksTotal,
-                shippingCharge,
-                courierName,
+                shippingCharge: activeShipping.charge,
+                courierName: activeShipping.courierName || 'TBD',
+                selectedCourierId: activeShipping.courierId,
                 adjustment,
                 adjustmentType,
-                grandTotal,
+                grandTotal: recomputedGrandTotal,
                 weightGrams,
                 notes,
-            });
+                stage,
+                paymentStatus: isPaid ? 'paid' : 'pending',
+                paymentMode,
+            };
+            if (isPaid) {
+                draftPayload.paidAt = new Date().toISOString();
+            }
+
+            await OrderService.createDraft(draftPayload);
             setStep('done');
         } catch (err) {
             console.error('Draft save error:', err);
@@ -97,8 +261,8 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             <div className="order-flow">
                 <div className="order-success glass-panel">
                     <div className="success-icon">✅</div>
-                    <h3>Draft Order Saved!</h3>
-                    <p>Go to <strong>Orders</strong> tab to confirm and share tracking.</p>
+                    <h3>Draft Order Saved</h3>
+                    <p>Order can be resumed from Orders anytime until confirmed.</p>
                     <button className="btn-primary" onClick={onComplete}>Go to Orders</button>
                 </div>
             </div>
@@ -110,7 +274,7 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             <div className="order-flow">
                 <div className="flow-header">
                     <button className="back-btn" onClick={onCancel}>← Back</button>
-                    <h3>📋 Create Order</h3>
+                    <h3>Create / Resume Draft</h3>
                 </div>
 
                 <div className="order-summary-mini glass-panel">
@@ -122,38 +286,45 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
 
                 <div className="paste-section glass-panel">
                     <h4>Paste Customer Address</h4>
-                    <p className="hint-text">Paste the full address text — we'll extract name, phone, pincode automatically</p>
+                    <p className="hint-text">
+                        Paste full text from chat. Gemini will extract name, phone, city, state and pincode.
+                    </p>
                     <textarea
                         className="address-textarea"
-                        placeholder={`John Doe\n9876543210\n123, MG Road, Sector 5\nNew Delhi, Delhi\n110001`}
+                        placeholder={`John Doe\n9876543210\nFlat 2B, MG Road\nKolkata, West Bengal 700001`}
                         value={rawText}
                         onChange={(e) => setRawText(e.target.value)}
                         rows={6}
                         autoFocus
                     />
-                    <button
-                        className="btn-primary"
-                        onClick={handleParse}
-                        disabled={!rawText.trim() || parsing}
-                    >
-                        {parsing ? '✨ Analyzing...' : 'Parse & Continue →'}
-                    </button>
+                    <div className="stacked-btns">
+                        <button
+                            className="btn-primary"
+                            onClick={handleParse}
+                            disabled={parsing}
+                        >
+                            {parsing ? 'Analyzing...' : 'Parse & Continue'}
+                        </button>
+                        <button className="btn-secondary-flow" onClick={() => setStep('review')}>
+                            Skip Parse, Fill Manually
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
-    // Step: review
+    const needsShippingRecalc = Boolean(address.pincode) && quotedPincode !== address.pincode;
+
     return (
         <div className="order-flow">
             <div className="flow-header">
                 <button className="back-btn" onClick={() => setStep('paste')}>← Back</button>
-                <h3>Review Order</h3>
+                <h3>Review Draft Details</h3>
             </div>
 
-            {/* Address Fields */}
             <div className="address-form glass-panel">
-                <h4>📍 Delivery Address</h4>
+                <h4>Delivery Address</h4>
                 <div className="addr-field">
                     <label>Name</label>
                     <input
@@ -168,7 +339,7 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                     <input
                         type="text"
                         value={address.phone}
-                        onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                        onChange={(e) => setAddress({ ...address, phone: e.target.value.replace(/\D/g, '') })}
                         placeholder="10-digit number"
                         maxLength={10}
                     />
@@ -179,7 +350,7 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                         <input
                             type="text"
                             value={address.pincode}
-                            onChange={(e) => setAddress({ ...address, pincode: e.target.value })}
+                            onChange={(e) => setAddress({ ...address, pincode: e.target.value.replace(/\D/g, '') })}
                             placeholder="6-digit"
                             maxLength={6}
                         />
@@ -212,11 +383,18 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                         rows={3}
                     />
                 </div>
+                <div className="shipping-recalc-row">
+                    <button className="btn-secondary-flow" onClick={recalculateShipping} disabled={shippingLoading}>
+                        {shippingLoading ? 'Checking Shipping...' : 'Recalculate Shipping for Address'}
+                    </button>
+                    {needsShippingRecalc && (
+                        <span className="recalc-hint">Pincode changed. Recalculate shipping before confirming.</span>
+                    )}
+                </div>
             </div>
 
-            {/* Order Summary */}
             <div className="order-review-summary glass-panel">
-                <h4>🧾 Order Summary</h4>
+                <h4>Order Summary</h4>
                 {items.map((item, i) => (
                     <div key={i} className="review-item">
                         <span>{item.title} [{item.variant === 'color' ? 'Color' : 'B&W'}] x{item.quantity}</span>
@@ -228,7 +406,8 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                     <span>Books Total</span><span>₹{booksTotal}</span>
                 </div>
                 <div className="review-item">
-                    <span>Shipping ({courierName})</span><span>₹{shippingCharge}</span>
+                    <span>Shipping ({activeShipping.courierName || 'TBD'})</span>
+                    <span>₹{activeShipping.charge}</span>
                 </div>
                 {adjustment > 0 && (
                     <div className={`review-item ${adjustmentType}`}>
@@ -238,13 +417,35 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                 )}
                 <div className="review-divider"></div>
                 <div className="review-item grand">
-                    <span>Grand Total</span><span>₹{grandTotal}</span>
+                    <span>Grand Total</span><span>₹{recomputedGrandTotal}</span>
                 </div>
             </div>
 
-            {/* Notes */}
+            <div className="payment-box glass-panel">
+                <h4>Payment</h4>
+                <div className="payment-row-controls">
+                    <label className="checkbox-label">
+                        <input
+                            type="checkbox"
+                            checked={isPaid}
+                            onChange={(e) => setIsPaid(e.target.checked)}
+                        />
+                        Mark as Paid
+                    </label>
+                    <select
+                        value={paymentMode}
+                        onChange={(e) => setPaymentMode(e.target.value as 'upi' | 'cash' | 'bank' | 'other')}
+                    >
+                        <option value="upi">UPI</option>
+                        <option value="cash">Cash</option>
+                        <option value="bank">Bank Transfer</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+
             <div className="notes-section glass-panel">
-                <h4>📝 Notes (Optional)</h4>
+                <h4>Notes</h4>
                 <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -253,13 +454,49 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                 />
             </div>
 
+            <div className="message-share-box glass-panel">
+                <h4>Share Quote / Draft Message</h4>
+                <div className="message-template-row">
+                    <label>Template</label>
+                    <select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
+                        <option value="">Use auto summary</option>
+                        {templates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                                {template.title}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="share-buttons-flow">
+                    <button className="share-btn whatsapp" onClick={shareWhatsApp}>
+                        Share WhatsApp
+                    </button>
+                    <button className="share-btn telegram" onClick={shareTelegram}>
+                        Share Telegram
+                    </button>
+                </div>
+            </div>
+
             <button
                 className="btn-primary save-order-btn"
                 onClick={handleSaveDraft}
                 disabled={saving}
             >
-                {saving ? '⏳ Saving...' : '💾 Save Draft Order'}
+                {saving ? 'Saving Draft...' : 'Save Draft Order'}
             </button>
+
+            {shippingQuotes && (
+                <CourierModal
+                    isOpen={showCourierModal}
+                    onClose={() => setShowCourierModal(false)}
+                    quotes={shippingQuotes}
+                    selectedCourier={selectedCourier}
+                    onSelect={(option) => {
+                        setSelectedCourier(option);
+                        setShowCourierModal(false);
+                    }}
+                />
+            )}
         </div>
     );
 };

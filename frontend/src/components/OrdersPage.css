@@ -367,3 +367,45 @@
 .orders-page .share-btn:active {
     transform: scale(0.97);
 }
+
+.btn-ship,
+.btn-confirm-manual {
+    padding: 10px 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: white;
+    font-family: var(--font-family);
+}
+
+.btn-ship {
+    background: linear-gradient(135deg, hsl(150, 62%, 45%), hsl(165, 72%, 42%));
+}
+
+.btn-confirm-manual {
+    background: linear-gradient(135deg, hsl(217, 70%, 45%), hsl(243, 73%, 52%));
+}
+
+.payment-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+}
+
+.payment-chip.paid {
+    color: var(--color-success);
+    background: var(--color-success-bg);
+}
+
+.payment-chip.pending {
+    color: hsl(38, 92%, 55%);
+    background: hsla(38, 92%, 55%, 0.15);
+}

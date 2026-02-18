@@ -9,15 +9,33 @@ export interface CartItem {
     quantity: number;
 }
 
+export interface CustomCartItem {
+    id: string;
+    title: string;
+    quantity: number;
+    pageCount: number;
+    unitPrice: number;
+    unitWeightGrams: number;
+    printMode: 'color' | 'bw';
+    pageSize: string;
+    paperType: string;
+    bindingType: string;
+}
+
 interface BookContextType {
     books: Book[];
     cart: CartItem[];
+    customCart: CustomCartItem[];
     loading: boolean;
     isAdmin: boolean;
     refreshBooks: () => Promise<void>;
     addToCart: (bookId: string, variant: BookVariant) => void;
     removeFromCart: (bookId: string, variant: BookVariant) => void;
     updateQuantity: (bookId: string, variant: BookVariant, delta: number) => void;
+    addCustomToCart: (item: Omit<CustomCartItem, 'id'>) => string;
+    updateCustomItem: (id: string, updates: Partial<Omit<CustomCartItem, 'id'>>) => void;
+    updateCustomQuantity: (id: string, delta: number) => void;
+    removeCustomFromCart: (id: string) => void;
     clearCart: () => void;
     toggleAdmin: () => void;
     getCartDetails: () => { book: Book; variant: BookVariant; quantity: number }[];
@@ -41,6 +59,14 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return [];
         }
     });
+    const [customCart, setCustomCart] = useState<CustomCartItem[]>(() => {
+        try {
+            const saved = localStorage.getItem('customCart');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    });
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -51,6 +77,14 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Failed to save cart', e);
         }
     }, [cart]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('customCart', JSON.stringify(customCart));
+        } catch (e) {
+            console.error('Failed to save custom cart', e);
+        }
+    }, [customCart]);
 
     const refreshBooks = async () => {
         try {
@@ -111,7 +145,38 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
-    const clearCart = () => setCart([]);
+    const addCustomToCart = (item: Omit<CustomCartItem, 'id'>): string => {
+        const id = `custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        setCustomCart((prev) => [...prev, { id, ...item }]);
+        return id;
+    };
+
+    const updateCustomItem = (id: string, updates: Partial<Omit<CustomCartItem, 'id'>>) => {
+        setCustomCart((prev) =>
+            prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+        );
+    };
+
+    const updateCustomQuantity = (id: string, delta: number) => {
+        setCustomCart((prev) =>
+            prev
+                .map((item) =>
+                    item.id === id
+                        ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+                        : item,
+                )
+                .filter((item) => item.quantity > 0),
+        );
+    };
+
+    const removeCustomFromCart = (id: string) => {
+        setCustomCart((prev) => prev.filter((item) => item.id !== id));
+    };
+
+    const clearCart = () => {
+        setCart([]);
+        setCustomCart([]);
+    };
 
     const toggleAdmin = () => setIsAdmin(!isAdmin);
 
@@ -144,24 +209,37 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         });
 
+        customCart.forEach((item) => {
+            price += item.unitPrice * item.quantity;
+            pages += item.pageCount * item.quantity;
+            weight += item.unitWeightGrams * item.quantity;
+        });
+
         return { price, pages, weight };
-    }, [cart, books]);
+    }, [cart, books, customCart]);
 
     const cartItemCount = useMemo(() => {
-        return cart.reduce((acc, item) => acc + item.quantity, 0);
-    }, [cart]);
+        const catalogCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+        const customCount = customCart.reduce((acc, item) => acc + item.quantity, 0);
+        return catalogCount + customCount;
+    }, [cart, customCart]);
 
     return (
         <BookContext.Provider
             value={{
                 books,
                 cart,
+                customCart,
                 loading,
                 isAdmin,
                 refreshBooks,
                 addToCart,
                 removeFromCart,
                 updateQuantity,
+                addCustomToCart,
+                updateCustomItem,
+                updateCustomQuantity,
+                removeCustomFromCart,
                 clearCart,
                 toggleAdmin,
                 getCartDetails,

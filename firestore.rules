@@ -13,6 +13,18 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Message templates for WhatsApp/Telegram presets
+    match /message_templates/{templateId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // App settings (pricing/weights)
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Default deny for all other collections
     match /{document=**} {

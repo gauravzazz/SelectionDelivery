@@ -4,16 +4,27 @@ import { ShipmentPayload } from '../courier/types';
 import { DelhiveryAdapter } from '../courier/adapters/delhivery';
 import { BluedartAdapter } from '../courier/adapters/bluedart';
 import { EkartAdapter } from '../courier/adapters/ekart';
+import { DtdcAdapter } from '../courier/adapters/dtdc';
+import { ShipwayAdapter } from '../courier/adapters/shipway';
 import { ShipyaariAdapter } from '../courier/adapters/shipyaari';
-import { getEnabledCouriers } from '../config/couriers';
 
 const router = Router();
+
+const normalizeCourierId = (value: string): string => {
+    const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+    if (normalized === 'ekart') return 'ekart_surface';
+    if (normalized === 'ekartsurface') return 'ekart_surface';
+    if (normalized === 'ekartexpress') return 'ekart_express';
+    return normalized;
+};
 
 // Cache adapters
 const adapters: Record<string, any> = {
     delhivery: new DelhiveryAdapter(),
     bluedart: new BluedartAdapter(),
-    ekart: new EkartAdapter('SURFACE'), // Default surface
+    dtdc: new DtdcAdapter(),
+    shipway: new ShipwayAdapter(),
+    ekart_surface: new EkartAdapter('SURFACE'),
     ekart_express: new EkartAdapter('EXPRESS'),
     shipyaari: new ShipyaariAdapter(),
 };
@@ -39,7 +50,11 @@ router.post('/create', async (req, res): Promise<void> => {
         const order = orderSnap.data() as any; // Typed loosely for now
 
         // 2. Select Courier
-        const targetCourierId = courierId || order.trackingCourier?.toLowerCase();
+        const targetCourierIdRaw =
+            courierId ||
+            order.selectedCourierId ||
+            order.trackingCourier;
+        const targetCourierId = targetCourierIdRaw ? normalizeCourierId(targetCourierIdRaw) : '';
         if (!targetCourierId) {
             res.status(400).json({ error: 'No courier selected' });
             return;
@@ -72,7 +87,12 @@ router.post('/create', async (req, res): Promise<void> => {
             items: order.items.map((item: any) => ({
                 title: `${item.title} (${item.quantity} copies)`,
                 quantity: item.quantity,
-                price: item.totalPrice / item.quantity
+                price:
+                    typeof item.unitPrice === 'number'
+                        ? item.unitPrice
+                        : (typeof item.totalPrice === 'number' && item.quantity > 0
+                            ? item.totalPrice / item.quantity
+                            : 0),
             })),
             weightGrams: order.weightGrams || 500, // Fallback
             paymentMethod: 'prepaid',
@@ -85,10 +105,12 @@ router.post('/create', async (req, res): Promise<void> => {
         // 5. Update Order in Firestore
         await orderRef.update({
             status: 'confirmed',
+            stage: 'shipped',
             trackingId: shipment.trackingId,
             trackingCourier: shipment.courierName,
             trackingLink: shipment.labelUrl || '', // or derive from ID
             labelUrl: shipment.labelUrl,
+            selectedCourierId: targetCourierId,
             updatedAt: new Date().toISOString()
         });
 

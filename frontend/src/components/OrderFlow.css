@@ -127,6 +127,29 @@
     cursor: not-allowed;
 }
 
+.stacked-btns {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+}
+
+.btn-secondary-flow {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-weight: 600;
+}
+
+.btn-secondary-flow:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
 /* Address form */
 .address-form {
     padding: var(--sp-lg);
@@ -181,6 +204,17 @@
 
 .addr-row .addr-field {
     flex: 1;
+}
+
+.shipping-recalc-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+}
+
+.recalc-hint {
+    font-size: 0.78rem;
+    color: var(--color-warning);
 }
 
 /* Review summary */
@@ -265,6 +299,85 @@
     margin-top: var(--sp-sm);
 }
 
+.payment-box,
+.message-share-box {
+    padding: var(--sp-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.payment-box h4,
+.message-share-box h4 {
+    margin: 0 0 var(--sp-sm) 0;
+    color: var(--color-text-primary);
+}
+
+.payment-row-controls {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    justify-content: space-between;
+}
+
+.payment-row-controls select,
+.message-template-row select {
+    width: 180px;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+
+.message-template-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: var(--sp-sm);
+}
+
+.message-template-row label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+.share-buttons-flow {
+    display: flex;
+    gap: var(--sp-sm);
+}
+
+.share-buttons-flow .share-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 700;
+    color: #fff;
+}
+
+.share-buttons-flow .share-btn.whatsapp {
+    background: hsl(142, 70%, 45%);
+}
+
+.share-buttons-flow .share-btn.telegram {
+    background: hsl(200, 100%, 40%);
+}
+
 /* Success */
 .order-success {
     display: flex;
@@ -296,6 +409,20 @@
 /* Mobile */
 @media (max-width: 480px) {
     .addr-row {
+        flex-direction: column;
+    }
+
+    .payment-row-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .payment-row-controls select,
+    .message-template-row select {
+        width: 100%;
+    }
+
+    .share-buttons-flow {
         flex-direction: column;
     }
 }

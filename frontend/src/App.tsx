@@ -7,6 +7,7 @@ import CartPage from './components/CartPage';
 import OrderFlow from './components/OrderFlow';
 import OrdersPage from './components/OrdersPage';
 import MessageManager from './components/MessageManager';
+import SettingsPage from './components/SettingsPage';
 import { useBookContext } from './context/BookContext';
 import {
     fetchDropdownOptions,
@@ -18,11 +19,7 @@ import { calculateWeight, WeightResult } from './engine/weightCalculator';
 import { OrderItem, OrderAddress } from './api/orderApi';
 
 function App() {
-    console.log('--- APP RENDERING --- mode:', (window as any)._mode); // Use window to avoid shadowing if needed
-
-    useEffect(() => {
-        console.log('--- APP MOUNTED ---');
-    }, []);    // Hardcoded fallback options so Calculator loads instantly
+    // Hardcoded fallback options so Calculator loads instantly
     const FALLBACK_OPTIONS: DropdownOptions = {
         pageSizes: ['A4', 'A3', 'A5', 'Letter'],
         gsmOptions: ['70', '80', '100', '130'],
@@ -41,7 +38,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages'>('catalog');
+    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages' | 'settings'>('catalog');
     const { cartItemCount } = useBookContext();
 
     // Order flow data passed from CartPage
@@ -50,11 +47,19 @@ function App() {
         booksTotal: number;
         shippingCharge: number;
         courierName: string;
+        selectedCourierId?: string;
         adjustment: number;
         adjustmentType: 'discount' | 'markup';
         grandTotal: number;
         weightGrams: number;
-    } | null>(null);
+    } | null>(() => {
+        try {
+            const saved = localStorage.getItem('orderFlowData');
+            return saved ? JSON.parse(saved) : null;
+        } catch (_error) {
+            return null;
+        }
+    });
 
     // Current form values for live weight preview
     const [currentForm, setCurrentForm] = useState({
@@ -74,6 +79,13 @@ function App() {
     });
     const [orderNotes, setOrderNotes] = useState(() => localStorage.getItem('orderNotes') || '');
 
+    useEffect(() => {
+        if (orderFlowData) {
+            localStorage.setItem('orderFlowData', JSON.stringify(orderFlowData));
+        } else {
+            localStorage.removeItem('orderFlowData');
+        }
+    }, [orderFlowData]);
     useEffect(() => { localStorage.setItem('orderRawText', orderRawText); }, [orderRawText]);
     useEffect(() => { localStorage.setItem('orderAddress', JSON.stringify(orderAddress)); }, [orderAddress]);
     useEffect(() => { localStorage.setItem('orderNotes', orderNotes); }, [orderNotes]);
@@ -176,6 +188,14 @@ function App() {
                     >
                         🛒 <span className="cart-badge">{cartItemCount}</span>
                     </button>
+                    {orderFlowData && (
+                        <button
+                            className={mode === 'order-flow' ? 'active' : ''}
+                            onClick={() => setMode('order-flow')}
+                        >
+                            🧾
+                        </button>
+                    )}
                     <button
                         className={mode === 'orders' ? 'active' : ''}
                         onClick={() => setMode('orders')}
@@ -187,6 +207,12 @@ function App() {
                         onClick={() => setMode('messages')}
                     >
                         💬
+                    </button>
+                    <button
+                        className={mode === 'settings' ? 'active' : ''}
+                        onClick={() => setMode('settings')}
+                    >
+                        ⚙️
                     </button>
                 </nav>
             </header>
@@ -236,9 +262,11 @@ function App() {
                         setNotes={setOrderNotes}
                         onComplete={() => {
                             setMode('orders');
+                            setOrderFlowData(null);
                             setOrderRawText('');
                             setOrderAddress({ name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '' });
                             setOrderNotes('');
+                            localStorage.removeItem('orderFlowData');
                             localStorage.removeItem('orderRawText');
                             localStorage.removeItem('orderAddress');
                             localStorage.removeItem('orderNotes');
@@ -249,6 +277,8 @@ function App() {
                     <div className="messages-standalone-container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}>
                         <MessageManager />
                     </div>
+                ) : mode === 'settings' ? (
+                    <SettingsPage />
                 ) : (
                     <OrdersPage />
                 )}

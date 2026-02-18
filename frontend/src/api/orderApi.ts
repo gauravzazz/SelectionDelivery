@@ -19,6 +19,23 @@ export interface OrderAddress {
     fullAddress: string;
 }
 
+export type OrderStage =
+    | 'quote_shared'
+    | 'awaiting_address'
+    | 'address_captured'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'printing'
+    | 'ready_to_ship'
+    | 'shipped';
+
+export interface CustomPrintConfig {
+    printMode: 'color' | 'bw';
+    pageSize: string;
+    paperType: string;
+    bindingType: string;
+}
+
 export interface OrderItem {
     bookId: string;
     title: string;
@@ -26,6 +43,8 @@ export interface OrderItem {
     quantity: number;
     unitPrice: number;
     pageCount: number;
+    itemType?: 'catalog' | 'custom';
+    customConfig?: CustomPrintConfig;
 }
 
 export interface Order {
@@ -40,9 +59,14 @@ export interface Order {
     grandTotal: number;
     weightGrams: number;
     status: 'draft' | 'confirmed';
+    stage: OrderStage;
+    paymentStatus: 'pending' | 'paid';
+    paymentMode?: 'upi' | 'cash' | 'bank' | 'other';
     trackingId?: string;
     trackingCourier?: string;
     trackingLink?: string;
+    selectedCourierId?: string;
+    paidAt?: string;
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -51,11 +75,18 @@ export interface Order {
 const COLLECTION_NAME = "orders";
 
 export const OrderService = {
-    async createDraft(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<Order> {
+    async createDraft(
+        order: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'stage' | 'paymentStatus'> & {
+            stage?: OrderStage;
+            paymentStatus?: 'pending' | 'paid';
+        },
+    ): Promise<Order> {
         const now = new Date().toISOString();
         const data = {
             ...order,
             status: 'draft' as const,
+            stage: order.stage || 'quote_shared',
+            paymentStatus: order.paymentStatus || 'pending',
             createdAt: now,
             updatedAt: now,
         };
@@ -66,10 +97,40 @@ export const OrderService = {
     async getAllOrders(): Promise<Order[]> {
         const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-        })) as Order[];
+        return snapshot.docs.map((d) => {
+            const raw = d.data() as Partial<Order>;
+            return {
+                id: d.id,
+                items: raw.items || [],
+                address: raw.address || {
+                    name: '',
+                    phone: '',
+                    pincode: '',
+                    city: '',
+                    state: '',
+                    fullAddress: '',
+                },
+                booksTotal: raw.booksTotal || 0,
+                shippingCharge: raw.shippingCharge || 0,
+                courierName: raw.courierName || 'TBD',
+                adjustment: raw.adjustment || 0,
+                adjustmentType: raw.adjustmentType || 'discount',
+                grandTotal: raw.grandTotal || 0,
+                weightGrams: raw.weightGrams || 0,
+                status: raw.status || 'draft',
+                stage: raw.stage || (raw.status === 'confirmed' ? 'shipped' : 'quote_shared'),
+                paymentStatus: raw.paymentStatus || 'pending',
+                paymentMode: raw.paymentMode,
+                trackingId: raw.trackingId,
+                trackingCourier: raw.trackingCourier,
+                trackingLink: raw.trackingLink,
+                selectedCourierId: raw.selectedCourierId,
+                paidAt: raw.paidAt,
+                notes: raw.notes,
+                createdAt: raw.createdAt || new Date().toISOString(),
+                updatedAt: raw.updatedAt || new Date().toISOString(),
+            };
+        });
     },
 
     async confirmOrder(id: string, tracking: {
@@ -79,6 +140,7 @@ export const OrderService = {
     }): Promise<void> {
         await updateDoc(doc(db, COLLECTION_NAME, id), {
             status: 'confirmed',
+            stage: 'shipped',
             ...tracking,
             updatedAt: new Date().toISOString(),
         });

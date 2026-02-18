@@ -45,6 +45,10 @@ const OrdersPage: React.FC = () => {
 
     const handleShipClick = async (e: React.MouseEvent, order: Order) => {
         e.stopPropagation(); // Prevent opening detail modal
+        if (order.paymentStatus !== 'paid') {
+            alert('Mark order as paid before creating shipment.');
+            return;
+        }
         setShippingOrder(order);
         setShippingLoading(true);
         setShippingQuotes(null);
@@ -62,7 +66,11 @@ const OrdersPage: React.FC = () => {
             setShippingQuotes(quotes);
 
             if (quotes.allOptions.length > 0) {
-                setSelectedCourier(quotes.cheapest);
+                const preferred =
+                    quotes.allOptions.find((opt) => opt.courierId === order.selectedCourierId) ||
+                    quotes.allOptions.find((opt) => opt.courierName === order.courierName) ||
+                    quotes.cheapest;
+                setSelectedCourier(preferred);
             }
             setShowShipModal(true);
         } catch (err) {
@@ -122,6 +130,27 @@ const OrdersPage: React.FC = () => {
             if (selectedOrder?.id === orderId) setIsDetailOpen(false);
         } catch (err) {
             console.error('Delete failed:', err);
+        }
+    };
+
+    const togglePaymentStatus = async (e: React.MouseEvent, order: Order) => {
+        e.stopPropagation();
+        const nextStatus = order.paymentStatus === 'paid' ? 'pending' : 'paid';
+        try {
+            const payload: Partial<Order> = {
+                paymentStatus: nextStatus,
+                stage: nextStatus === 'paid' ? 'paid' : 'awaiting_payment',
+            };
+            if (nextStatus === 'paid') {
+                payload.paidAt = new Date().toISOString();
+            } else {
+                payload.paidAt = '';
+            }
+            await OrderService.updateOrder(order.id, payload);
+            await loadOrders();
+        } catch (err) {
+            console.error('Failed to update payment status', err);
+            alert('Failed to update payment status');
         }
     };
 
@@ -217,6 +246,10 @@ const OrdersPage: React.FC = () => {
                                     <span>{order.items.length} item(s)</span>
                                     <span className="order-total">₹{order.grandTotal}</span>
                                 </div>
+                                <div className="order-detail">
+                                    <span>Stage: {order.stage}</span>
+                                    <span className={`payment-chip ${order.paymentStatus}`}>{order.paymentStatus}</span>
+                                </div>
                             </div>
 
                             {confirmingId === order.id ? (
@@ -250,6 +283,12 @@ const OrdersPage: React.FC = () => {
                                     <button className="btn-ship" onClick={(e) => handleShipClick(e, order)} disabled={shippingLoading}>
                                         {shippingLoading && shippingOrder?.id === order.id ? 'Loading...' : '🚀 Ship'}
                                     </button>
+                                    <button
+                                        className="btn-confirm-manual"
+                                        onClick={(e) => togglePaymentStatus(e, order)}
+                                    >
+                                        {order.paymentStatus === 'paid' ? 'Mark Pending' : 'Mark Paid'}
+                                    </button>
                                     <button className="btn-confirm-manual" onClick={(e) => { e.stopPropagation(); setConfirmingId(order.id); }}>
                                         Manual Confirm
                                     </button>
@@ -282,6 +321,10 @@ const OrdersPage: React.FC = () => {
                                 <div className="order-detail">
                                     <span>{order.items.length} item(s)</span>
                                     <span className="order-total">₹{order.grandTotal}</span>
+                                </div>
+                                <div className="order-detail">
+                                    <span>Stage: {order.stage}</span>
+                                    <span className={`payment-chip ${order.paymentStatus}`}>{order.paymentStatus}</span>
                                 </div>
                                 {order.trackingId && (
                                     <div className="tracking-info">

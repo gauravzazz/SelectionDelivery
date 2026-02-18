@@ -193,6 +193,7 @@
 .message-toolbar {
     display: flex;
     justify-content: flex-end;
+    gap: var(--sp-xs);
     padding-top: var(--sp-xs);
     border-top: 1px solid var(--color-border);
 }
@@ -220,6 +221,10 @@
 .btn-whatsapp:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.telegram-btn {
+    background: hsl(200, 100%, 40%);
 }
 
 @media (max-width: 768px) {
