@@ -112,9 +112,8 @@
 }
 
 .toggle-btn.active {
-    background: var(--color-primary);
     color: white;
-    box-shadow: var(--shadow-btn);
+    box-shadow: 0 4px 12px hsla(250, 84%, 54%, 0.3);
 }
 
 /* Chips */
@@ -226,7 +225,7 @@
 
 .submit-btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px hsla(250, 84%, 54%, 0.45);
+    box-shadow: 0 4px 20px hsla(250, 84%, 54%, 0.4);
 }
 
 .submit-btn:active:not(:disabled) {

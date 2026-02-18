@@ -7,10 +7,9 @@ interface OrderDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     order: Order | null;
-    onManageTemplates: () => void;
 }
 
-const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, order, onManageTemplates }) => {
+const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, order }) => {
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
     const [messageText, setMessageText] = useState('');
@@ -106,7 +105,6 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
                         <div className="action-section">
                             <div className="section-header-row">
                                 <h4>💬 Send Message</h4>
-                                <button className="btn-link-action" onClick={onManageTemplates}>⚙️ Edit Templates</button>
                             </div>
 
                             <div className="template-chips">

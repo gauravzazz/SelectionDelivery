@@ -3,11 +3,12 @@ import { MessageTemplate, MessageService } from '../api/messageApi';
 import './MessageManager.css';
 
 interface MessageManagerProps {
-    isOpen: boolean;
-    onClose: () => void;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
 const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
+    const isModal = isOpen !== undefined;
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -15,10 +16,10 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
     const [isAdding, setIsAdding] = useState(false);
 
     useEffect(() => {
-        if (isOpen) {
+        if (!isModal || isOpen) {
             loadTemplates();
         }
-    }, [isOpen]);
+    }, [isOpen, isModal]);
 
     const loadTemplates = async () => {
         setLoading(true);
@@ -83,69 +84,77 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
         setEditForm({ title: '', text: '' });
     };
 
-    if (!isOpen) return null;
+    if (isModal && !isOpen) return null;
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content message-manager-modal" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h3>💬 Message Templates</h3>
-                    <button className="close-btn" onClick={onClose}>×</button>
+    const content = (
+        <div className="message-manager-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <h3>💬 Message Templates</h3>
+                {isModal && <button className="close-btn" onClick={onClose}>×</button>}
+            </div>
+
+            <div className="manager-body">
+                <div className="template-list">
+                    <button className="btn-add-template" onClick={startAdd}>+ New Template</button>
+
+                    {loading ? <div className="loading">Loading...</div> : (
+                        templates.map(t => (
+                            <div key={t.id} className={`template-item ${editingId === t.id ? 'active' : ''}`} onClick={() => startEdit(t)}>
+                                <span className="t-title">{t.title}</span>
+                                <span className="t-preview">{t.text.substring(0, 30)}...</span>
+                            </div>
+                        ))
+                    )}
                 </div>
 
-                <div className="manager-body">
-                    <div className="template-list">
-                        <button className="btn-add-template" onClick={startAdd}>+ New Template</button>
-
-                        {loading ? <div className="loading">Loading...</div> : (
-                            templates.map(t => (
-                                <div key={t.id} className={`template-item ${editingId === t.id ? 'active' : ''}`} onClick={() => startEdit(t)}>
-                                    <span className="t-title">{t.title}</span>
-                                    <span className="t-preview">{t.text.substring(0, 30)}...</span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    <div className="editor-pane">
-                        {(editingId || isAdding) ? (
-                            <div className="editor-form">
-                                <h4>{isAdding ? 'New Template' : 'Edit Template'}</h4>
-                                <input
-                                    className="input-title"
-                                    placeholder="Template Title (e.g. 'Shipping Delay')"
-                                    value={editForm.title}
-                                    onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                />
-                                <textarea
-                                    className="input-text"
-                                    placeholder="Message content..."
-                                    rows={8}
-                                    value={editForm.text}
-                                    onChange={e => setEditForm(prev => ({ ...prev, text: e.target.value }))}
-                                />
-                                <div className="editor-actions">
-                                    <button className="btn-cancel" onClick={resetForm}>Cancel</button>
-                                    <button className="btn-save" onClick={handleSave} disabled={loading}>
-                                        {loading ? 'Saving...' : 'Save Template'}
-                                    </button>
-                                </div>
-                                {!isAdding && (
-                                    <button className="btn-delete-template" onClick={() => handleDelete(editingId!)}>
-                                        Delete Template
-                                    </button>
-                                )}
+                <div className="editor-pane">
+                    {(editingId || isAdding) ? (
+                        <div className="editor-form">
+                            <h4>{isAdding ? 'New Template' : 'Edit Template'}</h4>
+                            <input
+                                className="input-title"
+                                placeholder="Template Title (e.g. 'Shipping Delay')"
+                                value={editForm.title}
+                                onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                            />
+                            <textarea
+                                className="input-text"
+                                placeholder="Message content..."
+                                rows={8}
+                                value={editForm.text}
+                                onChange={e => setEditForm(prev => ({ ...prev, text: e.target.value }))}
+                            />
+                            <div className="editor-actions">
+                                <button className="btn-cancel" onClick={resetForm}>Cancel</button>
+                                <button className="btn-save" onClick={handleSave} disabled={loading}>
+                                    {loading ? 'Saving...' : 'Save Template'}
+                                </button>
                             </div>
-                        ) : (
-                            <div className="empty-selection">
-                                <p>Select a template to edit or create a new one.</p>
-                            </div>
-                        )}
-                    </div>
+                            {!isAdding && (
+                                <button className="btn-delete-template" onClick={() => handleDelete(editingId!)}>
+                                    Delete Template
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="empty-selection">
+                            <p>Select a template to edit or create a new one.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
+
+    if (isModal) {
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                {content}
+            </div>
+        );
+    }
+
+    return content;
 };
 
 export default MessageManager;

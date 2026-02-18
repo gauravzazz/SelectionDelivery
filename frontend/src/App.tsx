@@ -6,7 +6,7 @@ import BookList from './components/BookList';
 import CartPage from './components/CartPage';
 import OrderFlow from './components/OrderFlow';
 import OrdersPage from './components/OrdersPage';
-import MessagesPage from './components/MessagesPage';
+import MessageManager from './components/MessageManager';
 import { useBookContext } from './context/BookContext';
 import {
     fetchDropdownOptions,
@@ -15,10 +15,14 @@ import {
     QuoteResponse,
 } from './api/shippingApi';
 import { calculateWeight, WeightResult } from './engine/weightCalculator';
-import { OrderItem } from './api/orderApi';
+import { OrderItem, OrderAddress } from './api/orderApi';
 
 function App() {
-    // Hardcoded fallback options so Calculator loads instantly
+    console.log('--- APP RENDERING --- mode:', (window as any)._mode); // Use window to avoid shadowing if needed
+
+    useEffect(() => {
+        console.log('--- APP MOUNTED ---');
+    }, []);    // Hardcoded fallback options so Calculator loads instantly
     const FALLBACK_OPTIONS: DropdownOptions = {
         pageSizes: ['A4', 'A3', 'A5', 'Letter'],
         gsmOptions: ['70', '80', '100', '130'],
@@ -61,6 +65,18 @@ function App() {
         bindingType: 'spiral',
         packagingType: 'standard',
     });
+
+    // Persisted OrderFlow state with LocalStorage fallback
+    const [orderRawText, setOrderRawText] = useState(() => localStorage.getItem('orderRawText') || '');
+    const [orderAddress, setOrderAddress] = useState<OrderAddress>(() => {
+        const saved = localStorage.getItem('orderAddress');
+        return saved ? JSON.parse(saved) : { name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '' };
+    });
+    const [orderNotes, setOrderNotes] = useState(() => localStorage.getItem('orderNotes') || '');
+
+    useEffect(() => { localStorage.setItem('orderRawText', orderRawText); }, [orderRawText]);
+    useEffect(() => { localStorage.setItem('orderAddress', JSON.stringify(orderAddress)); }, [orderAddress]);
+    useEffect(() => { localStorage.setItem('orderNotes', orderNotes); }, [orderNotes]);
 
     // Try to load options from backend (enhances defaults with courier list)
     useEffect(() => {
@@ -212,11 +228,27 @@ function App() {
                 ) : mode === 'order-flow' && orderFlowData ? (
                     <OrderFlow
                         {...orderFlowData}
-                        onComplete={() => setMode('orders')}
+                        rawText={orderRawText}
+                        setRawText={setOrderRawText}
+                        address={orderAddress}
+                        setAddress={setOrderAddress}
+                        notes={orderNotes}
+                        setNotes={setOrderNotes}
+                        onComplete={() => {
+                            setMode('orders');
+                            setOrderRawText('');
+                            setOrderAddress({ name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '' });
+                            setOrderNotes('');
+                            localStorage.removeItem('orderRawText');
+                            localStorage.removeItem('orderAddress');
+                            localStorage.removeItem('orderNotes');
+                        }}
                         onCancel={() => setMode('cart')}
                     />
                 ) : mode === 'messages' ? (
-                    <MessagesPage />
+                    <div className="messages-standalone-container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}>
+                        <MessageManager />
+                    </div>
                 ) : (
                     <OrdersPage />
                 )}

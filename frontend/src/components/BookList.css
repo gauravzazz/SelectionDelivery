@@ -29,8 +29,8 @@
 
 .admin-toggle,
 .add-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
     padding: 8px 16px;
     border-radius: var(--radius-md);
@@ -43,9 +43,9 @@
 
 .admin-toggle:hover,
 .add-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-card-hover);
     color: var(--color-text-primary);
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-border-focus);
 }
 
 /* ── Search Bar ── */
@@ -113,7 +113,7 @@
 
 .book-card:hover {
     transform: translateY(-6px);
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--color-border-focus);
     box-shadow: var(--shadow-card);
 }
 
@@ -511,36 +511,6 @@
         transform: translateX(3px);
     }
 }
-/* ── Paste Loading ── */
-.paste-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--sp-xl);
-    text-align: center;
-    gap: var(--sp-md);
-    min-height: 200px;
-}
-
-.paste-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--color-border);
-    border-top-color: var(--color-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-.paste-loading p {
-    color: var(--color-text-primary);
-    font-weight: 600;
-    margin: 0;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
 
 /* ── Paste Loading ── */
 .paste-loading {
@@ -570,7 +540,42 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Paste Loading ── */
+.paste-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-xl);
+    text-align: center;
+    gap: var(--sp-md);
+    min-height: 200px;
+}
+
+.paste-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.paste-loading p {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    margin: 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ── Floating Cart Button ── */

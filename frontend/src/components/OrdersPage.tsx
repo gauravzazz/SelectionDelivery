@@ -13,7 +13,6 @@ const OrdersPage: React.FC = () => {
     // Modals
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [isMsgManagerOpen, setIsMsgManagerOpen] = useState(false);
 
     // Shipping confirmation state
     const [shippingOrder, setShippingOrder] = useState<Order | null>(null);
@@ -188,9 +187,6 @@ const OrdersPage: React.FC = () => {
         <div className="orders-page">
             <div className="orders-header">
                 <h3>📋 Orders</h3>
-                <button className="btn-manage-msgs" onClick={() => setIsMsgManagerOpen(true)}>
-                    💬 Manage Templates
-                </button>
             </div>
 
             {orders.length === 0 && (
@@ -314,13 +310,8 @@ const OrdersPage: React.FC = () => {
                 isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
                 order={selectedOrder}
-                onManageTemplates={() => setIsMsgManagerOpen(true)}
             />
 
-            <MessageManager
-                isOpen={isMsgManagerOpen}
-                onClose={() => setIsMsgManagerOpen(false)}
-            />
 
             {shippingQuotes && (
                 <CourierModal

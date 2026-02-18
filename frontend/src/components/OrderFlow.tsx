@@ -11,6 +11,12 @@ interface OrderFlowProps {
     adjustmentType: 'discount' | 'markup';
     grandTotal: number;
     weightGrams: number;
+    address: OrderAddress;
+    setAddress: React.Dispatch<React.SetStateAction<OrderAddress>>;
+    notes: string;
+    setNotes: React.Dispatch<React.SetStateAction<string>>;
+    rawText: string;
+    setRawText: React.Dispatch<React.SetStateAction<string>>;
     onComplete: () => void;
     onCancel: () => void;
 }
@@ -18,16 +24,11 @@ interface OrderFlowProps {
 const OrderFlow: React.FC<OrderFlowProps> = ({
     items, booksTotal, shippingCharge, courierName,
     adjustment, adjustmentType, grandTotal, weightGrams,
+    address, setAddress, notes, setNotes, rawText, setRawText,
     onComplete, onCancel,
 }) => {
     const [step, setStep] = useState<'paste' | 'review' | 'done'>('paste');
-    const [rawText, setRawText] = useState('');
-    const [address, setAddress] = useState<OrderAddress>({
-        name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '',
-    });
     const [saving, setSaving] = useState(false);
-    const [notes, setNotes] = useState('');
-
     const [parsing, setParsing] = useState(false);
 
     const handleParse = async () => {
