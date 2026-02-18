@@ -9,10 +9,48 @@ export interface MessageTemplate {
 
 const COLLECTION_NAME = 'message_templates';
 
+const DEFAULT_TEMPLATES: Array<Omit<MessageTemplate, 'id'>> = [
+    {
+        title: 'Draft Reminder',
+        text: "Hi {name}, your draft order is ready. Share your address and we will proceed quickly.",
+    },
+    {
+        title: 'Payment Details',
+        text: "Hi {name}, your total amount is ₹{grandTotal}. Please complete payment and share screenshot to confirm your order.",
+    },
+    {
+        title: 'Thank You',
+        text: "Thank you {name} for choosing us. Your order is in process and we appreciate your trust.",
+    },
+    {
+        title: 'Order Confirmed',
+        text: "Hello {name}! Your order #{orderId} is confirmed. We will ship it soon.",
+    },
+    {
+        title: 'Shipping Update',
+        text: "Great news {name}! Shipped via {trackingCourier}. Tracking ID: {trackingId}. Track: {trackingLink}",
+    },
+    {
+        title: 'Order Delayed',
+        text: "Hi {name}, your order is slightly delayed. We are working to dispatch it as soon as possible.",
+    },
+    {
+        title: 'Order Delivered',
+        text: "Hi {name}, your order has been delivered. Thank you and we hope you loved the print quality.",
+    },
+    {
+        title: 'Feedback Request',
+        text: "Hi {name}, thank you for ordering with us. Please share your feedback and rating.",
+    },
+];
+
+const normalizeTitle = (title: string) => title.trim().toLowerCase();
+
 export const MessageService = {
     getAll: async (): Promise<MessageTemplate[]> => {
+        await MessageService.ensureDefaults();
         const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageTemplate));
+        return snapshot.docs.map((docRef) => ({ id: docRef.id, ...docRef.data() } as MessageTemplate));
     },
 
     save: async (template: MessageTemplate) => {
@@ -31,39 +69,24 @@ export const MessageService = {
         await deleteDoc(doc(db, COLLECTION_NAME, id));
     },
 
-    // Initialize defaults if empty
-    initializeDefaults: async () => {
+    ensureDefaults: async () => {
         const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-        if (snapshot.empty) {
-            const defaults = [
-                {
-                    title: 'Draft Reminder',
-                    text: "Hi {name}, you have a draft order on OnlinePrintout.com. Complete your order here now to get it delivered faster! 📚"
-                },
-                {
-                    title: 'Order Confirmed',
-                    text: "Hello {name}! Your order from OnlinePrintout.com is confirmed. We will ship it within 24-48 hours. Thank you! 🙏"
-                },
-                {
-                    title: 'Shipping Update',
-                    text: "Great news {name}! Your order has been shipped via {trackingCourier}. Tracking ID: {trackingId}. Track here: {trackingLink}"
-                },
-                {
-                    title: 'Order Delayed',
-                    text: "Hi {name}, there is a slight delay in your shipment due to heavy load. We apologize for the wait and will update you soon."
-                },
-                {
-                    title: 'Order Delivered',
-                    text: "Hi {name}, your order has been delivered. We hope you love the print quality! Enjoy reading! 📚✨"
-                },
-                {
-                    title: 'Feedback Request',
-                    text: "Hi {name}, hope you liked our service! Please share your feedback: [Link]. Your reviews help us grow! 🙏"
-                },
-            ];
-            for (const t of defaults) {
-                await addDoc(collection(db, COLLECTION_NAME), t);
+        const existingTitles = new Set(
+            snapshot.docs
+                .map((docRef) => String(docRef.data().title || ''))
+                .filter(Boolean)
+                .map(normalizeTitle),
+        );
+
+        for (const template of DEFAULT_TEMPLATES) {
+            if (!existingTitles.has(normalizeTitle(template.title))) {
+                await addDoc(collection(db, COLLECTION_NAME), template);
             }
         }
-    }
+    },
+
+    // Backward-compat alias
+    initializeDefaults: async () => {
+        await MessageService.ensureDefaults();
+    },
 };

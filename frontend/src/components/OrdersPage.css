@@ -409,3 +409,51 @@
     color: hsl(38, 92%, 55%);
     background: hsla(38, 92%, 55%, 0.15);
 }
+
+@media (max-width: 760px) {
+    .orders-page {
+        padding-bottom: var(--sp-md);
+    }
+
+    .order-card {
+        padding: var(--sp-md);
+        border-radius: var(--radius-lg);
+    }
+
+    .order-card-header {
+        align-items: flex-start;
+        gap: var(--sp-xs);
+    }
+
+    .order-name {
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .order-detail {
+        gap: var(--sp-sm);
+        align-items: flex-start;
+    }
+
+    .tracking-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .order-card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .orders-page .share-btn,
+    .btn-ship,
+    .btn-confirm-manual,
+    .btn-delete {
+        width: 100%;
+    }
+
+    .confirm-actions {
+        flex-direction: column;
+    }
+}

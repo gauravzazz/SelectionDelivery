@@ -56,6 +56,12 @@
     border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
+.messages-standalone-container {
+    padding: var(--sp-xl);
+    display: flex;
+    justify-content: center;
+}
+
 .app-nav button {
     padding: 8px 18px;
     border: none;
@@ -211,13 +217,21 @@
 
     .app-nav {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .app-nav::-webkit-scrollbar {
+        display: none;
     }
 
     .app-nav button {
         padding: 7px 12px;
         font-size: 0.78rem;
-        flex: 1;
+        flex: 0 0 auto;
+        min-width: 44px;
         text-align: center;
     }
 
@@ -234,5 +248,9 @@
 
     .error-banner {
         max-width: 100%;
+    }
+
+    .messages-standalone-container {
+        padding: var(--sp-sm);
     }
 }

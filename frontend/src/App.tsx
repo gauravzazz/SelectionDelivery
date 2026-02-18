@@ -282,7 +282,7 @@ function App() {
                         onCancel={() => setMode('cart')}
                     />
                 ) : mode === 'messages' ? (
-                    <div className="messages-standalone-container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}>
+                    <div className="messages-standalone-container">
                         <MessageManager />
                     </div>
                 ) : mode === 'settings' ? (

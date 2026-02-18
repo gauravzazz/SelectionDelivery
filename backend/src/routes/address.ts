@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { parseAddressWithGemini } from '../services/geminiService';
+import { parseAddressHeuristic, parseAddressWithGemini } from '../services/geminiService';
 
 const router = Router();
 
@@ -17,7 +17,12 @@ router.post('/parse', async (req, res): Promise<void> => {
 
     } catch (error: any) {
         console.error('Address parsing failed:', error);
-        res.status(500).json({ error: error.message || 'Failed to parse address' });
+        const fallback = parseAddressHeuristic(String(req.body?.text || ''));
+        res.status(200).json({
+            success: true,
+            parsed: fallback,
+            warning: 'Gemini parsing failed; heuristic fallback used.',
+        });
     }
 });
 

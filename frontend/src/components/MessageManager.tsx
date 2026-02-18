@@ -26,18 +26,9 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
         setLoading(true);
         try {
             const data = await MessageService.getAll();
-            if (data.length === 0) {
-                await MessageService.initializeDefaults();
-                const defaults = await MessageService.getAll();
-                setTemplates(defaults);
-                if (!editingId && defaults.length > 0) {
-                    startEdit(defaults[0]);
-                }
-            } else {
-                setTemplates(data);
-                if (!editingId && data.length > 0 && !isAdding) {
-                    startEdit(data[0]);
-                }
+            setTemplates(data);
+            if (!editingId && data.length > 0 && !isAdding) {
+                startEdit(data[0]);
             }
         } catch (err) {
             console.error(err);

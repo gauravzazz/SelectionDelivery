@@ -47,13 +47,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
 
     const loadTemplates = async () => {
         const data = await MessageService.getAll();
-        if (data.length === 0) {
-            await MessageService.initializeDefaults();
-            const defaults = await MessageService.getAll();
-            setTemplates(defaults);
-        } else {
-            setTemplates(data);
-        }
+        setTemplates(data);
     };
 
     const handleTemplateSelect = (t: MessageTemplate) => {
@@ -63,6 +57,8 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
         if (order) {
             text = text.replace('{orderId}', order.id)
                 .replace('{name}', order.address.name)
+                .replace('{grandTotal}', String(order.grandTotal))
+                .replace('{trackingCourier}', order.trackingCourier || order.courierName || '')
                 .replace('{trackingId}', order.trackingId || '')
                 .replace('{trackingLink}', order.trackingLink || '');
         }

@@ -161,39 +161,38 @@ export const OrderService = {
 
 /** Parse raw pasted text into structured address fields */
 export function parseAddress(raw: string): Partial<OrderAddress> {
-    const lines = raw.trim().split('\n').map(l => l.trim()).filter(Boolean);
     const fullText = raw.trim();
+    const lines = fullText.split('\n').map((line) => line.trim()).filter(Boolean);
 
-    // Extract pincode (6 digits)
-    const pincodeMatch = fullText.match(/\b(\d{6})\b/);
-    const pincode = pincodeMatch?.[1] || '';
+    const pincode = fullText.match(/\b(\d{6})\b/)?.[1] || '';
 
-    // Extract phone (10 digits, optionally with +91 / 0 prefix)
-    const phoneMatch = fullText.match(/(?:\+91[\s-]?|0)?([6-9]\d{9})\b/);
-    const phone = phoneMatch?.[1] || '';
+    const phoneRaw = fullText.match(/(?:\+?91[\s-]*)?(?:0)?([6-9]\d{9})\b/)?.[1] || '';
+    const phone = phoneRaw.replace(/\D/g, '').slice(-10);
 
-    // Heuristic: first line is usually the name
-    let name = '';
-    if (lines.length > 0) {
-        const firstLine = lines[0];
-        // If first line doesn't look like an address (no numbers, short enough)
-        if (firstLine.length < 40 && !/\d{3,}/.test(firstLine)) {
-            name = firstLine;
-        }
-    }
+    const name =
+        lines.find((line) => line.length < 50 && /[A-Za-z]/.test(line) && !/\d{3,}/.test(line)) || '';
 
-    // Try to extract city/state from common patterns
-    let city = '';
-    let state = '';
-    const cityStateMatch = fullText.match(/(?:city|dist(?:rict)?)[:\s-]*([A-Za-z\s]+)/i);
-    if (cityStateMatch) city = cityStateMatch[1].trim();
+    const cityLabel = fullText.match(/(?:city|district|dist)[:\s-]*([A-Za-z][A-Za-z.\s]+)/i)?.[1]?.trim() || '';
+    const stateLabel = fullText.match(/(?:state)[:\s-]*([A-Za-z][A-Za-z.\s]+)/i)?.[1]?.trim() || '';
 
-    const stateMatch = fullText.match(/(?:state)[:\s-]*([A-Za-z\s]+)/i);
-    if (stateMatch) state = stateMatch[1].trim();
+    const cityStateNearPin = pincode
+        ? fullText.match(
+            new RegExp(
+                `([A-Za-z][A-Za-z.\\s]{1,40}),\\s*([A-Za-z][A-Za-z.\\s]{1,40})\\s*[-,]?\\s*${pincode}`,
+                'i',
+            ),
+        )
+        : null;
 
-    // Build full address from all lines except the name line
-    const addressLines = name ? lines.slice(1) : lines;
-    const fullAddress = addressLines.join(', ');
+    const city = cityLabel || cityStateNearPin?.[1]?.trim() || '';
+    const state = stateLabel || cityStateNearPin?.[2]?.trim() || '';
+
+    const fullAddress = lines
+        .join(', ')
+        .replace(/\s*,\s*/g, ', ')
+        .replace(/,\s*,/g, ', ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
 
     return {
         name,
