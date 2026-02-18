@@ -227,6 +227,68 @@
     background: hsl(200, 100%, 40%);
 }
 
+.draft-details-section {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-sm);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.missing-fields-box {
+    font-size: 0.8rem;
+    color: hsl(38, 92%, 55%);
+    background: hsla(38, 92%, 55%, 0.12);
+    border: 1px solid hsla(38, 92%, 55%, 0.28);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--sp-sm);
+}
+
+.missing-fields-box.ok {
+    color: var(--color-success);
+    background: var(--color-success-bg);
+    border-color: hsla(160, 84%, 44%, 0.3);
+}
+
+.draft-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.draft-form-grid input,
+.draft-address-textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+}
+
+.draft-address-textarea {
+    resize: vertical;
+    margin-bottom: 8px;
+}
+
+.btn-save-draft-details {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, hsl(217, 70%, 45%), hsl(243, 73%, 52%));
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-save-draft-details:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
     .modal-body-split {
         flex-direction: column;
@@ -240,5 +302,9 @@
     .modal-content.large-modal {
         height: 95vh;
         width: 100%;
+    }
+
+    .draft-form-grid {
+        grid-template-columns: 1fr;
     }
 }

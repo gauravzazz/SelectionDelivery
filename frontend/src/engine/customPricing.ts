@@ -5,6 +5,7 @@ export interface CustomPrintInput {
     pageCount: number;
     printMode: 'color' | 'bw';
     pageSize: string;
+    gsm: string;
     paperType: string;
     bindingType: string;
 }
@@ -22,26 +23,28 @@ export function calculateCustomPricing(
     input: CustomPrintInput,
     settings: PrintPricingSettings,
 ): CustomPricingResult {
-    const pageRate =
+    const rateMatrix =
         input.printMode === 'color'
-            ? settings.colorPageRate
-            : settings.bwPageRate;
+            ? settings.colorRatesBySizeGsm
+            : settings.bwRatesBySizeGsm;
+    const pageRate =
+        rateMatrix[input.pageSize]?.[input.gsm] ??
+        (input.printMode === 'color' ? settings.colorPageRate : settings.bwPageRate);
 
-    const sizeMultiplier = settings.sizeMultipliers[input.pageSize] ?? 1;
     const paperMultiplier = settings.paperMultipliers[input.paperType] ?? 1;
     const bindingCharge = settings.bindingCharges[input.bindingType] ?? 0;
 
-    const pagesPrice = input.pageCount * pageRate * sizeMultiplier * paperMultiplier;
+    const pagesPrice = input.pageCount * pageRate * paperMultiplier;
     const unitPrice = roundRupee(
         Math.max(settings.minOrderCharge, pagesPrice + bindingCharge + settings.packagingCharge),
     );
 
     const sheets = getPhysicalSheets(input.pageCount, 'double');
     const baseSheetWeight = settings.baseWeightBySize[input.pageSize] ?? 5;
-    const paperWeight = sheets * baseSheetWeight * paperMultiplier;
+    const gsmWeightMultiplier = settings.gsmWeightMultipliers[input.gsm] ?? 1;
+    const paperWeight = sheets * baseSheetWeight * paperMultiplier * gsmWeightMultiplier;
     const bindingWeight = settings.bindingWeightGrams[input.bindingType] ?? 0;
     const unitWeightGrams = roundRupee(paperWeight + bindingWeight + settings.packagingWeightGrams);
 
     return { unitPrice, unitWeightGrams };
 }
-

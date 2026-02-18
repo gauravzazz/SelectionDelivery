@@ -82,6 +82,30 @@
     font-size: 0.8rem;
 }
 
+.sync-message {
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    font-size: 0.82rem;
+}
+
+.sync-message.ok {
+    color: var(--color-success);
+    background: var(--color-success-bg);
+}
+
+.sync-message.warn {
+    color: hsl(38, 92%, 55%);
+    background: hsla(38, 92%, 55%, 0.12);
+    border-color: hsla(38, 92%, 55%, 0.35);
+}
+
+.sync-message.error {
+    color: hsl(0, 72%, 60%);
+    background: hsla(0, 72%, 55%, 0.12);
+    border-color: hsla(0, 72%, 55%, 0.35);
+}
+
 .btn-secondary,
 .btn-primary {
     padding: 10px 14px;
@@ -111,6 +135,48 @@
     color: var(--color-text-muted);
 }
 
+.rate-matrix-wrap {
+    overflow-x: auto;
+}
+
+.rate-matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 520px;
+}
+
+.rate-matrix-table th,
+.rate-matrix-table td {
+    border: 1px solid var(--color-border);
+    padding: 8px;
+    text-align: center;
+}
+
+.rate-matrix-table th {
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rate-matrix-table td:first-child {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    min-width: 64px;
+}
+
+.rate-matrix-table input {
+    width: 88px;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+}
+
 @media (max-width: 900px) {
     .settings-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -135,4 +201,3 @@
         grid-template-columns: 1fr;
     }
 }
-

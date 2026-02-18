@@ -18,6 +18,7 @@ export interface CustomCartItem {
     unitWeightGrams: number;
     printMode: 'color' | 'bw';
     pageSize: string;
+    gsm: string;
     paperType: string;
     bindingType: string;
 }

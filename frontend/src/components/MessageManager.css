@@ -1,6 +1,6 @@
 .message-manager-modal {
-    width: 800px;
-    height: 600px;
+    width: min(960px, 100%);
+    height: min(720px, 90vh);
     display: flex;
     flex-direction: column;
     background: var(--color-bg-card);
@@ -17,7 +17,7 @@
 }
 
 .template-list {
-    width: 300px;
+    width: 320px;
     border-right: 1px solid var(--color-border);
     background: rgba(255, 255, 255, 0.01);
     overflow-y: auto;
@@ -35,6 +35,9 @@
     cursor: pointer;
     text-align: left;
     transition: all 0.2s;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .btn-add-template:hover {
@@ -48,6 +51,7 @@
     cursor: pointer;
     transition: all 0.2s;
     color: var(--color-text-secondary);
+    min-height: 72px;
 }
 
 .template-item:hover {
@@ -78,7 +82,7 @@
 
 .editor-pane {
     flex: 1;
-    padding: var(--sp-xl);
+    padding: var(--sp-lg);
     background: transparent;
     overflow-y: auto;
 }
@@ -114,7 +118,7 @@
     color: var(--color-text-primary);
     resize: vertical;
     outline: none;
-    min-height: 200px;
+    min-height: 180px;
 }
 
 .editor-actions {
@@ -178,4 +182,88 @@
     height: 100%;
     color: var(--color-text-muted);
     font-weight: 500;
+}
+
+.variable-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.variable-chip {
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-secondary);
+    padding: 6px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.variable-chip:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-primary);
+}
+
+.template-preview-panel {
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    padding: var(--sp-sm);
+}
+
+.template-preview-panel span {
+    display: inline-block;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.template-preview-panel p {
+    white-space: pre-wrap;
+    color: var(--color-text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 860px) {
+    .message-manager-modal {
+        height: 92vh;
+    }
+
+    .manager-body {
+        flex-direction: column;
+    }
+
+    .template-list {
+        width: 100%;
+        max-height: 35vh;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .template-item {
+        min-height: 64px;
+    }
+
+    .editor-pane {
+        padding: var(--sp-md);
+    }
+}
+
+@media (max-width: 520px) {
+    .editor-actions {
+        flex-direction: column;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        width: 100%;
+    }
+
+    .btn-delete-template {
+        width: 100%;
+    }
 }

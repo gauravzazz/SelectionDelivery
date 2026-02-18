@@ -37,6 +37,11 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
     onSubmit,
     onFieldChange,
 }) => {
+    const enabledCourierIds = React.useMemo(
+        () => couriers.filter((c) => c.enabled).map((c) => c.id),
+        [couriers],
+    );
+
     const [form, setForm] = React.useState<FormData>({
         destinationPincode: '',
         pageCount: 10,
@@ -45,8 +50,16 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
         printSide: 'double',
         bindingType: 'spiral',
         packagingType: 'standard',
-        selectedCouriers: couriers.filter((c) => c.enabled).map((c) => c.id),
+        selectedCouriers: enabledCourierIds,
     });
+
+    React.useEffect(() => {
+        if (enabledCourierIds.length === 0) return;
+        setForm((prev) => {
+            if (prev.selectedCouriers.length > 0) return prev;
+            return { ...prev, selectedCouriers: enabledCourierIds };
+        });
+    }, [enabledCourierIds]);
 
     const updateField = (field: keyof FormData, value: string | number | string[]) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -190,21 +203,23 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
             </div>
 
             {/* Courier Filter */}
-            <div className="field-group">
-                <label className="field-label">Couriers to Check</label>
-                <div className="chip-group">
-                    {couriers.filter((c) => c.enabled).map((c) => (
-                        <button
-                            key={c.id}
-                            type="button"
-                            className={`chip courier-chip ${form.selectedCouriers.includes(c.id) ? 'active' : ''}`}
-                            onClick={() => toggleCourier(c.id)}
-                        >
-                            {form.selectedCouriers.includes(c.id) ? '✓ ' : ''}{c.name}
-                        </button>
-                    ))}
+            {enabledCourierIds.length > 0 && (
+                <div className="field-group">
+                    <label className="field-label">Couriers to Check</label>
+                    <div className="chip-group">
+                        {couriers.filter((c) => c.enabled).map((c) => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                className={`chip courier-chip ${form.selectedCouriers.includes(c.id) ? 'active' : ''}`}
+                                onClick={() => toggleCourier(c.id)}
+                            >
+                                {form.selectedCouriers.includes(c.id) ? '✓ ' : ''}{c.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Live Weight Preview */}
             {weight && weight.totalWeightGrams > 0 && (
@@ -240,7 +255,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                 id="submitQuote"
                 type="submit"
                 className="submit-btn"
-                disabled={loading || form.destinationPincode.length !== 6 || form.selectedCouriers.length === 0}
+                disabled={loading || form.destinationPincode.length !== 6}
             >
                 {loading ? (
                     <span className="btn-spinner" />

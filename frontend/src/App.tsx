@@ -174,7 +174,7 @@ function App() {
                         className={mode === 'calculator' ? 'active' : ''}
                         onClick={() => setMode('calculator')}
                     >
-                        🖩
+                        🧮
                     </button>
                     <button
                         className={mode === 'catalog' ? 'active' : ''}

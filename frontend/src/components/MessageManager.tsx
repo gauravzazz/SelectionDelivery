@@ -14,6 +14,7 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ title: '', text: '' });
     const [isAdding, setIsAdding] = useState(false);
+    const templateVariables = ['{name}', '{orderId}', '{grandTotal}', '{trackingCourier}', '{trackingId}', '{trackingLink}'];
 
     useEffect(() => {
         if (!isModal || isOpen) {
@@ -27,9 +28,16 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
             const data = await MessageService.getAll();
             if (data.length === 0) {
                 await MessageService.initializeDefaults();
-                setTemplates(await MessageService.getAll());
+                const defaults = await MessageService.getAll();
+                setTemplates(defaults);
+                if (!editingId && defaults.length > 0) {
+                    startEdit(defaults[0]);
+                }
             } else {
                 setTemplates(data);
+                if (!editingId && data.length > 0 && !isAdding) {
+                    startEdit(data[0]);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -84,6 +92,10 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
         setEditForm({ title: '', text: '' });
     };
 
+    const insertVariable = (token: string) => {
+        setEditForm((prev) => ({ ...prev, text: `${prev.text}${prev.text ? ' ' : ''}${token}` }));
+    };
+
     if (isModal && !isOpen) return null;
 
     const content = (
@@ -124,6 +136,22 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
                                 value={editForm.text}
                                 onChange={e => setEditForm(prev => ({ ...prev, text: e.target.value }))}
                             />
+                            <div className="variable-chips">
+                                {templateVariables.map((token) => (
+                                    <button
+                                        key={token}
+                                        type="button"
+                                        className="variable-chip"
+                                        onClick={() => insertVariable(token)}
+                                    >
+                                        {token}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="template-preview-panel">
+                                <span>Preview</span>
+                                <p>{editForm.text || 'Message preview appears here.'}</p>
+                            </div>
                             <div className="editor-actions">
                                 <button className="btn-cancel" onClick={resetForm}>Cancel</button>
                                 <button className="btn-save" onClick={handleSave} disabled={loading}>

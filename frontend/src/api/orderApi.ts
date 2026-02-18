@@ -32,6 +32,7 @@ export type OrderStage =
 export interface CustomPrintConfig {
     printMode: 'color' | 'bw';
     pageSize: string;
+    gsm: string;
     paperType: string;
     bindingType: string;
 }

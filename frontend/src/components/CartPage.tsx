@@ -42,6 +42,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
         removeCustomFromCart,
     } = useBookContext();
     const catalogCartItems = getCartDetails();
+    const [customBuilderOpen, setCustomBuilderOpen] = useState(catalogCartItems.length === 0);
 
     const [pricingSettings, setPricingSettings] = useState<PrintPricingSettings>(DEFAULT_PRICING_SETTINGS);
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -52,6 +53,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
         pageCount: 80,
         printMode: 'bw' as 'color' | 'bw',
         pageSize: pricingSettings.defaultPageSize,
+        gsm: pricingSettings.defaultGsm,
         paperType: pricingSettings.defaultPaperType,
         bindingType: pricingSettings.defaultBindingType,
         quantity: 1,
@@ -64,6 +66,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                     pageCount: customForm.pageCount,
                     printMode: customForm.printMode,
                     pageSize: customForm.pageSize,
+                    gsm: customForm.gsm,
                     paperType: customForm.paperType,
                     bindingType: customForm.bindingType,
                 },
@@ -83,6 +86,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                 setCustomForm((prev) => ({
                     ...prev,
                     pageSize: prev.pageSize || settings.defaultPageSize,
+                    gsm: prev.gsm || settings.defaultGsm,
                     paperType: prev.paperType || settings.defaultPaperType,
                     bindingType: prev.bindingType || settings.defaultBindingType,
                 }));
@@ -117,6 +121,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
             pageCount: customForm.pageCount,
             printMode: customForm.printMode,
             pageSize: customForm.pageSize,
+            gsm: customForm.gsm,
             paperType: customForm.paperType,
             bindingType: customForm.bindingType,
             unitPrice: customPreview.unitPrice,
@@ -131,6 +136,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
             pageCount: number;
             printMode: 'color' | 'bw';
             pageSize: string;
+            gsm: string;
             paperType: string;
             bindingType: string;
         },
@@ -138,6 +144,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
             pageCount: number;
             printMode: 'color' | 'bw';
             pageSize: string;
+            gsm: string;
             paperType: string;
             bindingType: string;
             title: string;
@@ -149,6 +156,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                 pageCount: merged.pageCount,
                 printMode: merged.printMode,
                 pageSize: merged.pageSize,
+                gsm: merged.gsm,
                 paperType: merged.paperType,
                 bindingType: merged.bindingType,
             },
@@ -232,7 +240,8 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
 
         customCart.forEach((item, idx) => {
             const line = catalogCartItems.length + idx + 1;
-            msg += `${line}. ${item.title} [Custom ${item.printMode.toUpperCase()} | ${item.pageCount}p | ${item.bindingType}] x${item.quantity} = ₹${item.unitPrice * item.quantity}\n`;
+            const gsm = item.gsm || pricingSettings.defaultGsm;
+            msg += `${line}. ${item.title} [Custom ${item.printMode.toUpperCase()} | ${item.pageSize} ${gsm}GSM | ${item.pageCount}p | ${item.bindingType}] x${item.quantity} = ₹${item.unitPrice * item.quantity}\n`;
         });
 
         msg += `\n*Books Total*: ₹${totals.price}`;
@@ -293,93 +302,130 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
         <div className="cart-page-container">
             <h2 className="cart-page-title">Your Order</h2>
 
-            <div className="custom-job-builder glass-panel">
-                <div className="section-heading">
+            <div className={`custom-job-builder glass-panel ${customBuilderOpen ? '' : 'collapsed'}`}>
+                <button
+                    className="section-heading section-heading-btn"
+                    type="button"
+                    onClick={() => setCustomBuilderOpen((prev) => !prev)}
+                >
                     <h4>Custom Print Job</h4>
-                    <span>For notes/books not in catalog</span>
-                </div>
-                <div className="custom-form-grid">
-                    <input
-                        type="text"
-                        value={customForm.title}
-                        onChange={(e) => setCustomForm((prev) => ({ ...prev, title: e.target.value }))}
-                        placeholder="Title (e.g. Semester Notes)"
-                    />
-                    <input
-                        type="number"
-                        min={1}
-                        value={customForm.pageCount}
-                        onChange={(e) =>
-                            setCustomForm((prev) => ({
-                                ...prev,
-                                pageCount: Math.max(1, Number(e.target.value) || 1),
-                            }))
-                        }
-                        placeholder="Pages"
-                    />
-                    <select
-                        value={customForm.printMode}
-                        onChange={(e) =>
-                            setCustomForm((prev) => ({
-                                ...prev,
-                                printMode: e.target.value as 'color' | 'bw',
-                            }))
-                        }
-                    >
-                        <option value="bw">B&W</option>
-                        <option value="color">Color</option>
-                    </select>
-                    <select
-                        value={customForm.pageSize}
-                        onChange={(e) => setCustomForm((prev) => ({ ...prev, pageSize: e.target.value }))}
-                    >
-                        {Object.keys(pricingSettings.sizeMultipliers).map((size) => (
-                            <option key={size} value={size}>
-                                {size}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={customForm.paperType}
-                        onChange={(e) => setCustomForm((prev) => ({ ...prev, paperType: e.target.value }))}
-                    >
-                        {Object.keys(pricingSettings.paperMultipliers).map((paperType) => (
-                            <option key={paperType} value={paperType}>
-                                {paperType}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={customForm.bindingType}
-                        onChange={(e) => setCustomForm((prev) => ({ ...prev, bindingType: e.target.value }))}
-                    >
-                        {Object.keys(pricingSettings.bindingCharges).map((binding) => (
-                            <option key={binding} value={binding}>
-                                {binding}
-                            </option>
-                        ))}
-                    </select>
-                    <input
-                        type="number"
-                        min={1}
-                        value={customForm.quantity}
-                        onChange={(e) =>
-                            setCustomForm((prev) => ({
-                                ...prev,
-                                quantity: Math.max(1, Number(e.target.value) || 1),
-                            }))
-                        }
-                        placeholder="Qty"
-                    />
-                </div>
-                <div className="custom-preview-row">
-                    <span>Per copy: ₹{customPreview.unitPrice}</span>
-                    <span>Weight: {(customPreview.unitWeightGrams / 1000).toFixed(2)} kg</span>
-                    <button className="add-custom-btn" onClick={handleAddCustom}>
-                        + Add Custom Job
-                    </button>
-                </div>
+                    <span>{customBuilderOpen ? 'Tap to collapse' : 'Tap to expand'}</span>
+                </button>
+
+                {!customBuilderOpen && (
+                    <div className="custom-collapsed-meta">
+                        <span>Per copy: ₹{customPreview.unitPrice}</span>
+                        <span>Weight: {(customPreview.unitWeightGrams / 1000).toFixed(2)} kg</span>
+                    </div>
+                )}
+
+                {customBuilderOpen && (
+                    <>
+                        <div className="custom-form-grid">
+                            <input
+                                type="text"
+                                value={customForm.title}
+                                onChange={(e) => setCustomForm((prev) => ({ ...prev, title: e.target.value }))}
+                                placeholder="Title (e.g. Semester Notes)"
+                            />
+                            <input
+                                type="number"
+                                min={1}
+                                value={customForm.pageCount}
+                                onChange={(e) =>
+                                    setCustomForm((prev) => ({
+                                        ...prev,
+                                        pageCount: Math.max(1, Number(e.target.value) || 1),
+                                    }))
+                                }
+                                placeholder="Pages"
+                            />
+                            <select
+                                value={customForm.printMode}
+                                onChange={(e) =>
+                                    setCustomForm((prev) => ({
+                                        ...prev,
+                                        printMode: e.target.value as 'color' | 'bw',
+                                    }))
+                                }
+                            >
+                                <option value="bw">B&W</option>
+                                <option value="color">Color</option>
+                            </select>
+                            <select
+                                value={customForm.pageSize}
+                                onChange={(e) => setCustomForm((prev) => ({ ...prev, pageSize: e.target.value }))}
+                            >
+                                {Object.keys(pricingSettings.sizeMultipliers).map((size) => (
+                                    <option key={size} value={size}>
+                                        {size}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={customForm.gsm}
+                                onChange={(e) => setCustomForm((prev) => ({ ...prev, gsm: e.target.value }))}
+                            >
+                                {pricingSettings.gsmOptions.map((gsm) => (
+                                    <option key={gsm} value={gsm}>
+                                        {gsm} GSM
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={customForm.paperType}
+                                onChange={(e) => setCustomForm((prev) => ({ ...prev, paperType: e.target.value }))}
+                            >
+                                {Object.keys(pricingSettings.paperMultipliers).map((paperType) => (
+                                    <option key={paperType} value={paperType}>
+                                        {paperType}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={customForm.bindingType}
+                                onChange={(e) => setCustomForm((prev) => ({ ...prev, bindingType: e.target.value }))}
+                            >
+                                {Object.keys(pricingSettings.bindingCharges).map((binding) => (
+                                    <option key={binding} value={binding}>
+                                        {binding}
+                                    </option>
+                                ))}
+                            </select>
+                            <input
+                                type="number"
+                                min={1}
+                                value={customForm.quantity}
+                                onChange={(e) =>
+                                    setCustomForm((prev) => ({
+                                        ...prev,
+                                        quantity: Math.max(1, Number(e.target.value) || 1),
+                                    }))
+                                }
+                                placeholder="Qty"
+                            />
+                        </div>
+                        <div className="custom-preview-row">
+                            <span>Per copy: ₹{customPreview.unitPrice}</span>
+                            <span>Weight: {(customPreview.unitWeightGrams / 1000).toFixed(2)} kg</span>
+                            <button className="add-custom-btn" onClick={handleAddCustom}>
+                                + Add Custom Job
+                            </button>
+                        </div>
+                    </>
+                )}
+                {customBuilderOpen && (
+                    <div className="custom-builder-hint">For notes/books not in catalog</div>
+                )}
+                {!customBuilderOpen && (
+                    <div className="custom-builder-hint collapsed">For notes/books not in catalog</div>
+                )}
             </div>
+            {catalogCartItems.length > 0 && !customBuilderOpen && (
+                <div className="custom-collapsed-tip">
+                    Custom job panel is collapsed because catalog items are in cart.
+                </div>
+            )}
 
             <div className="cart-list">
                 {catalogCartItems.map(({ book, variant, quantity }) => {
@@ -409,7 +455,9 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                     );
                 })}
 
-                {customCart.map((item) => (
+                {customCart.map((item) => {
+                    const itemGsm = item.gsm || pricingSettings.defaultGsm;
+                    return (
                     <div key={item.id} className="cart-item-card glass-panel custom-item-card">
                         <div className="cart-item-info">
                             <input
@@ -422,6 +470,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                             pageCount: item.pageCount,
                                             printMode: item.printMode,
                                             pageSize: item.pageSize,
+                                            gsm: itemGsm,
                                             paperType: item.paperType,
                                             bindingType: item.bindingType,
                                         },
@@ -431,6 +480,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                             />
                             <div className="cart-badges">
                                 <span className={`badge ${item.printMode}`}>{item.printMode.toUpperCase()}</span>
+                                <span className="badge pages">{item.pageSize} {itemGsm} GSM</span>
                                 <span className="badge pages">{item.pageCount} Pages</span>
                                 <span className="badge pages">Custom</span>
                             </div>
@@ -446,6 +496,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 pageCount: item.pageCount,
                                                 printMode: item.printMode,
                                                 pageSize: item.pageSize,
+                                                gsm: itemGsm,
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
@@ -462,6 +513,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 pageCount: item.pageCount,
                                                 printMode: item.printMode,
                                                 pageSize: item.pageSize,
+                                                gsm: itemGsm,
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
@@ -481,6 +533,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 pageCount: item.pageCount,
                                                 printMode: item.printMode,
                                                 pageSize: item.pageSize,
+                                                gsm: itemGsm,
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
@@ -495,6 +548,29 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                     ))}
                                 </select>
                                 <select
+                                    value={itemGsm}
+                                    onChange={(e) =>
+                                        handleCustomFieldUpdate(
+                                            item.id,
+                                            {
+                                                pageCount: item.pageCount,
+                                                printMode: item.printMode,
+                                                pageSize: item.pageSize,
+                                                gsm: itemGsm,
+                                                paperType: item.paperType,
+                                                bindingType: item.bindingType,
+                                            },
+                                            { gsm: e.target.value },
+                                        )
+                                    }
+                                >
+                                    {pricingSettings.gsmOptions.map((gsm) => (
+                                        <option key={gsm} value={gsm}>
+                                            {gsm} GSM
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
                                     value={item.paperType}
                                     onChange={(e) =>
                                         handleCustomFieldUpdate(
@@ -503,6 +579,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 pageCount: item.pageCount,
                                                 printMode: item.printMode,
                                                 pageSize: item.pageSize,
+                                                gsm: itemGsm,
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
@@ -525,6 +602,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 pageCount: item.pageCount,
                                                 printMode: item.printMode,
                                                 pageSize: item.pageSize,
+                                                gsm: itemGsm,
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
@@ -554,7 +632,8 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                             </button>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             <div className="checkout-summary glass-panel">
@@ -696,6 +775,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                             customConfig: {
                                 printMode: item.printMode,
                                 pageSize: item.pageSize,
+                                gsm: item.gsm || pricingSettings.defaultGsm,
                                 paperType: item.paperType,
                                 bindingType: item.bindingType,
                             },
@@ -733,4 +813,3 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
 };
 
 export default CartPage;
-
