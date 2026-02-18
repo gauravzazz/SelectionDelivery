@@ -8,6 +8,7 @@ import cors from 'cors';
 import quoteRouter from './routes/quote';
 import shipmentRouter from './routes/shipment';
 import addressRouter from './routes/address';
+import settingsRouter from './routes/settings';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -24,11 +25,13 @@ app.use(express.json());
 app.use('/api/shipping-quote', quoteRouter);
 app.use('/api/shipment', shipmentRouter);
 app.use('/api/address', addressRouter);
+app.use('/api/settings', settingsRouter);
 
 // Compatibility routes for direct Function URL usage where '/api' prefix is not present.
 app.use('/shipping-quote', quoteRouter);
 app.use('/shipment', shipmentRouter);
 app.use('/address', addressRouter);
+app.use('/settings', settingsRouter);
 
 // Health check
 app.get('/health', (_req, res) => {

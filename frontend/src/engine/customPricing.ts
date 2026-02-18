@@ -23,13 +23,12 @@ export function calculateCustomPricing(
     input: CustomPrintInput,
     settings: PrintPricingSettings,
 ): CustomPricingResult {
-    const rateMatrix =
+    const priceMatrix =
         input.printMode === 'color'
             ? settings.colorRatesBySizeGsm
             : settings.bwRatesBySizeGsm;
     const pageRate =
-        rateMatrix[input.pageSize]?.[input.gsm] ??
-        (input.printMode === 'color' ? settings.colorPageRate : settings.bwPageRate);
+        priceMatrix[input.pageSize]?.[input.gsm] ?? 0;
 
     const paperMultiplier = settings.paperMultipliers[input.paperType] ?? 1;
     const bindingCharge = settings.bindingCharges[input.bindingType] ?? 0;
@@ -40,9 +39,8 @@ export function calculateCustomPricing(
     );
 
     const sheets = getPhysicalSheets(input.pageCount, 'double');
-    const baseSheetWeight = settings.baseWeightBySize[input.pageSize] ?? 5;
-    const gsmWeightMultiplier = settings.gsmWeightMultipliers[input.gsm] ?? 1;
-    const paperWeight = sheets * baseSheetWeight * paperMultiplier * gsmWeightMultiplier;
+    const sheetWeight = settings.sheetWeightBySizeGsm[input.pageSize]?.[input.gsm] ?? 0;
+    const paperWeight = sheets * sheetWeight * paperMultiplier;
     const bindingWeight = settings.bindingWeightGrams[input.bindingType] ?? 0;
     const unitWeightGrams = roundRupee(paperWeight + bindingWeight + settings.packagingWeightGrams);
 

@@ -1,20 +1,12 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-
 export interface PrintPricingSettings {
-    bwPageRate: number;
-    colorPageRate: number;
-    sizeMultipliers: Record<string, number>;
     gsmOptions: string[];
-    gsmPriceMultipliers: Record<string, number>;
-    gsmWeightMultipliers: Record<string, number>;
     bwRatesBySizeGsm: Record<string, Record<string, number>>;
     colorRatesBySizeGsm: Record<string, Record<string, number>>;
+    sheetWeightBySizeGsm: Record<string, Record<string, number>>;
     paperMultipliers: Record<string, number>;
     bindingCharges: Record<string, number>;
     minOrderCharge: number;
     packagingCharge: number;
-    baseWeightBySize: Record<string, number>;
     bindingWeightGrams: Record<string, number>;
     packagingWeightGrams: number;
     defaultPageSize: string;
@@ -23,32 +15,11 @@ export interface PrintPricingSettings {
     defaultBindingType: string;
 }
 
-const COLLECTION_NAME = 'app_settings';
-const DOC_ID = 'pricing';
 const LOCAL_SETTINGS_KEY = 'appSettingsPricingLocal';
+const DEFAULT_PROD_API_BASE = 'https://api-v4k6yqu5ia-uc.a.run.app';
 
 export const DEFAULT_PRICING_SETTINGS: PrintPricingSettings = {
-    bwPageRate: 1.2,
-    colorPageRate: 6,
-    sizeMultipliers: {
-        A4: 1,
-        A3: 1.9,
-        A5: 0.75,
-        Letter: 1,
-    },
     gsmOptions: ['75', '80', '100', '130'],
-    gsmPriceMultipliers: {
-        '75': 1,
-        '80': 1.05,
-        '100': 1.3,
-        '130': 1.65,
-    },
-    gsmWeightMultipliers: {
-        '75': 0.95,
-        '80': 1,
-        '100': 1.25,
-        '130': 1.6,
-    },
     bwRatesBySizeGsm: {
         A4: { '75': 1.2, '80': 1.3, '100': 1.6, '130': 2.0 },
         A3: { '75': 2.2, '80': 2.4, '100': 3.1, '130': 4.0 },
@@ -60,6 +31,12 @@ export const DEFAULT_PRICING_SETTINGS: PrintPricingSettings = {
         A3: { '75': 10.8, '80': 11.6, '100': 13.8, '130': 16.6 },
         A5: { '75': 4.8, '80': 5.1, '100': 6.2, '130': 7.5 },
         Letter: { '75': 6.0, '80': 6.4, '100': 7.6, '130': 9.2 },
+    },
+    sheetWeightBySizeGsm: {
+        A4: { '75': 4.8, '80': 5, '100': 6.2, '130': 8.0 },
+        A3: { '75': 7.7, '80': 8, '100': 10.0, '130': 12.8 },
+        A5: { '75': 2.9, '80': 3, '100': 3.8, '130': 4.8 },
+        Letter: { '75': 4.8, '80': 5, '100': 6.2, '130': 8.0 },
     },
     paperMultipliers: {
         standard: 1,
@@ -74,12 +51,6 @@ export const DEFAULT_PRICING_SETTINGS: PrintPricingSettings = {
     },
     minOrderCharge: 20,
     packagingCharge: 10,
-    baseWeightBySize: {
-        A4: 5,
-        A3: 8,
-        A5: 3,
-        Letter: 5,
-    },
     bindingWeightGrams: {
         none: 0,
         spiral: 120,
@@ -93,119 +64,52 @@ export const DEFAULT_PRICING_SETTINGS: PrintPricingSettings = {
     defaultBindingType: 'spiral',
 };
 
-function uniqueKeys(values: string[]): string[] {
-    return Array.from(new Set(values));
-}
+const unique = (values: string[]): string[] => Array.from(new Set(values));
 
-function round2(value: number): number {
-    return Number(value.toFixed(2));
-}
-
-function extractMatrixGsmKeys(matrix?: Record<string, Record<string, number>>): string[] {
-    if (!matrix) return [];
-    return Object.values(matrix).flatMap((row) => Object.keys(row || {}));
-}
-
-function mergeRatesMatrix(
-    rawMatrix: Record<string, Record<string, number>> | undefined,
-    fallbackMatrix: Record<string, Record<string, number>>,
-    sizes: string[],
-    gsms: string[],
-): Record<string, Record<string, number>> {
-    const next: Record<string, Record<string, number>> = {};
-    for (const size of sizes) {
-        next[size] = {};
-        for (const gsm of gsms) {
-            const rawValue = rawMatrix?.[size]?.[gsm];
-            const fallbackValue = fallbackMatrix[size]?.[gsm];
-            next[size][gsm] = Number.isFinite(rawValue) ? Number(rawValue) : Number(fallbackValue ?? 0);
-        }
+const buildApiRoots = (raw?: string): string[] => {
+    const input = (raw || (import.meta.env.DEV ? '/api' : DEFAULT_PROD_API_BASE)).replace(/\/$/, '');
+    const roots = [input];
+    if (input.endsWith('/api')) {
+        roots.push(input.slice(0, -'/api'.length));
+    } else {
+        roots.push(`${input}/api`);
     }
-    return next;
-}
+    return unique(roots.map((root) => root.replace(/\/$/, '')));
+};
 
-function sanitizeSettings(raw: Partial<PrintPricingSettings> | undefined): PrintPricingSettings {
-    if (!raw) return DEFAULT_PRICING_SETTINGS;
-    const mergedBase: PrintPricingSettings = {
-        ...DEFAULT_PRICING_SETTINGS,
-        ...raw,
-        sizeMultipliers: {
-            ...DEFAULT_PRICING_SETTINGS.sizeMultipliers,
-            ...(raw.sizeMultipliers || {}),
-        },
-        gsmPriceMultipliers: {
-            ...DEFAULT_PRICING_SETTINGS.gsmPriceMultipliers,
-            ...(raw.gsmPriceMultipliers || {}),
-        },
-        gsmWeightMultipliers: {
-            ...DEFAULT_PRICING_SETTINGS.gsmWeightMultipliers,
-            ...(raw.gsmWeightMultipliers || {}),
-        },
-        paperMultipliers: {
-            ...DEFAULT_PRICING_SETTINGS.paperMultipliers,
-            ...(raw.paperMultipliers || {}),
-        },
-        bindingCharges: {
-            ...DEFAULT_PRICING_SETTINGS.bindingCharges,
-            ...(raw.bindingCharges || {}),
-        },
-        baseWeightBySize: {
-            ...DEFAULT_PRICING_SETTINGS.baseWeightBySize,
-            ...(raw.baseWeightBySize || {}),
-        },
-        bindingWeightGrams: {
-            ...DEFAULT_PRICING_SETTINGS.bindingWeightGrams,
-            ...(raw.bindingWeightGrams || {}),
-        },
-        bwRatesBySizeGsm: raw.bwRatesBySizeGsm || DEFAULT_PRICING_SETTINGS.bwRatesBySizeGsm,
-        colorRatesBySizeGsm: raw.colorRatesBySizeGsm || DEFAULT_PRICING_SETTINGS.colorRatesBySizeGsm,
-        gsmOptions: raw.gsmOptions || DEFAULT_PRICING_SETTINGS.gsmOptions,
-    };
+const API_ROOTS = buildApiRoots(import.meta.env.VITE_API_BASE_URL);
 
-    const sizes = uniqueKeys([
-        ...Object.keys(mergedBase.sizeMultipliers),
-        ...Object.keys(mergedBase.baseWeightBySize),
-        ...Object.keys(mergedBase.bwRatesBySizeGsm || {}),
-        ...Object.keys(mergedBase.colorRatesBySizeGsm || {}),
-    ]);
+async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+    let lastResponse: Response | null = null;
+    let lastError: unknown = null;
 
-    const gsms = uniqueKeys([
-        ...DEFAULT_PRICING_SETTINGS.gsmOptions,
-        ...(mergedBase.gsmOptions || []).map((gsm) => String(gsm)),
-        ...Object.keys(mergedBase.gsmPriceMultipliers),
-        ...Object.keys(mergedBase.gsmWeightMultipliers),
-        ...extractMatrixGsmKeys(raw?.bwRatesBySizeGsm),
-        ...extractMatrixGsmKeys(raw?.colorRatesBySizeGsm),
-    ]);
+    for (const root of API_ROOTS) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+            const res = await fetch(`${root}${path}`, {
+                ...(init || {}),
+                signal: controller.signal,
+            });
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            const isJson = contentType.includes('application/json');
+            if (res.ok && isJson) return res;
 
-    const generatedBwFallback: Record<string, Record<string, number>> = {};
-    const generatedColorFallback: Record<string, Record<string, number>> = {};
-    for (const size of sizes) {
-        generatedBwFallback[size] = {};
-        generatedColorFallback[size] = {};
-        for (const gsm of gsms) {
-            const sizeMultiplier = mergedBase.sizeMultipliers[size] ?? 1;
-            const gsmMultiplier = mergedBase.gsmPriceMultipliers[gsm] ?? 1;
-            generatedBwFallback[size][gsm] = round2(mergedBase.bwPageRate * sizeMultiplier * gsmMultiplier);
-            generatedColorFallback[size][gsm] = round2(mergedBase.colorPageRate * sizeMultiplier * gsmMultiplier);
+            if (res.status === 404 || res.status === 405 || (res.ok && !isJson)) {
+                lastResponse = res;
+                continue;
+            }
+            return res;
+        } catch (error) {
+            lastError = error;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    const result: PrintPricingSettings = {
-        ...mergedBase,
-        gsmOptions: gsms,
-        bwRatesBySizeGsm: mergeRatesMatrix(raw?.bwRatesBySizeGsm, generatedBwFallback, sizes, gsms),
-        colorRatesBySizeGsm: mergeRatesMatrix(raw?.colorRatesBySizeGsm, generatedColorFallback, sizes, gsms),
-    };
-
-    if (!result.defaultPageSize || !sizes.includes(result.defaultPageSize)) {
-        result.defaultPageSize = sizes[0] || DEFAULT_PRICING_SETTINGS.defaultPageSize;
-    }
-    if (!result.defaultGsm || !gsms.includes(result.defaultGsm)) {
-        result.defaultGsm = gsms[0] || DEFAULT_PRICING_SETTINGS.defaultGsm;
-    }
-
-    return result;
+    if (lastResponse) return lastResponse;
+    if (lastError instanceof Error) throw lastError;
+    throw new Error('Failed to reach settings API');
 }
 
 function readLocalSettings(): PrintPricingSettings | null {
@@ -224,33 +128,150 @@ function writeLocalSettings(settings: PrintPricingSettings): void {
     try {
         localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
     } catch (_error) {
-        // Ignore storage quota/availability failures
+        // Ignore local storage failures.
     }
 }
 
+function matrixKeys(matrix: Record<string, Record<string, number>> | undefined): string[] {
+    if (!matrix) return [];
+    return Object.values(matrix).flatMap((row) => Object.keys(row || {}));
+}
+
+function buildMatrix(
+    incoming: Record<string, Record<string, number>> | undefined,
+    fallback: Record<string, Record<string, number>>,
+    sizes: string[],
+    gsms: string[],
+): Record<string, Record<string, number>> {
+    const next: Record<string, Record<string, number>> = {};
+    for (const size of sizes) {
+        next[size] = {};
+        for (const gsm of gsms) {
+            const value = incoming?.[size]?.[gsm];
+            next[size][gsm] = Number.isFinite(value) ? Number(value) : Number(fallback[size]?.[gsm] ?? 0);
+        }
+    }
+    return next;
+}
+
+function migrateLegacyIfNeeded(raw: any): Partial<PrintPricingSettings> {
+    if (!raw || typeof raw !== 'object') return {};
+    const hasMatrix = raw.bwRatesBySizeGsm && raw.colorRatesBySizeGsm;
+    if (hasMatrix) return raw;
+
+    const sizes = Object.keys(raw.sizeMultipliers || DEFAULT_PRICING_SETTINGS.bwRatesBySizeGsm);
+    const gsms = unique([
+        ...(raw.gsmOptions || DEFAULT_PRICING_SETTINGS.gsmOptions).map((gsm: string) => String(gsm)),
+        ...Object.keys(raw.gsmPriceMultipliers || {}),
+        ...Object.keys(raw.gsmWeightMultipliers || {}),
+    ]);
+
+    const bwRatesBySizeGsm: Record<string, Record<string, number>> = {};
+    const colorRatesBySizeGsm: Record<string, Record<string, number>> = {};
+    const sheetWeightBySizeGsm: Record<string, Record<string, number>> = {};
+
+    for (const size of sizes) {
+        bwRatesBySizeGsm[size] = {};
+        colorRatesBySizeGsm[size] = {};
+        sheetWeightBySizeGsm[size] = {};
+        for (const gsm of gsms) {
+            const sizeMultiplier = Number(raw.sizeMultipliers?.[size] ?? 1);
+            const priceMul = Number(raw.gsmPriceMultipliers?.[gsm] ?? 1);
+            const weightMul = Number(raw.gsmWeightMultipliers?.[gsm] ?? 1);
+            const bwBase = Number(raw.bwPageRate ?? 1.2);
+            const colorBase = Number(raw.colorPageRate ?? 6);
+            const baseWeight = Number(raw.baseWeightBySize?.[size] ?? 5);
+
+            bwRatesBySizeGsm[size][gsm] = Number((bwBase * sizeMultiplier * priceMul).toFixed(2));
+            colorRatesBySizeGsm[size][gsm] = Number((colorBase * sizeMultiplier * priceMul).toFixed(2));
+            sheetWeightBySizeGsm[size][gsm] = Number((baseWeight * weightMul).toFixed(2));
+        }
+    }
+
+    return {
+        ...raw,
+        gsmOptions: gsms,
+        bwRatesBySizeGsm,
+        colorRatesBySizeGsm,
+        sheetWeightBySizeGsm,
+        defaultGsm: raw.defaultGsm || gsms[0] || DEFAULT_PRICING_SETTINGS.defaultGsm,
+    };
+}
+
+function sanitizeSettings(raw: Partial<PrintPricingSettings> | undefined): PrintPricingSettings {
+    const migrated = migrateLegacyIfNeeded(raw);
+    const merged = {
+        ...DEFAULT_PRICING_SETTINGS,
+        ...migrated,
+        paperMultipliers: {
+            ...DEFAULT_PRICING_SETTINGS.paperMultipliers,
+            ...(migrated.paperMultipliers || {}),
+        },
+        bindingCharges: {
+            ...DEFAULT_PRICING_SETTINGS.bindingCharges,
+            ...(migrated.bindingCharges || {}),
+        },
+        bindingWeightGrams: {
+            ...DEFAULT_PRICING_SETTINGS.bindingWeightGrams,
+            ...(migrated.bindingWeightGrams || {}),
+        },
+    };
+
+    const sizes = unique([
+        ...Object.keys(merged.bwRatesBySizeGsm || {}),
+        ...Object.keys(merged.colorRatesBySizeGsm || {}),
+        ...Object.keys(merged.sheetWeightBySizeGsm || {}),
+        ...Object.keys(DEFAULT_PRICING_SETTINGS.bwRatesBySizeGsm),
+    ]);
+
+    const gsms = unique([
+        ...DEFAULT_PRICING_SETTINGS.gsmOptions,
+        ...(merged.gsmOptions || []).map((gsm) => String(gsm)),
+        ...matrixKeys(merged.bwRatesBySizeGsm),
+        ...matrixKeys(merged.colorRatesBySizeGsm),
+        ...matrixKeys(merged.sheetWeightBySizeGsm),
+    ]);
+
+    const result: PrintPricingSettings = {
+        ...merged,
+        gsmOptions: gsms,
+        bwRatesBySizeGsm: buildMatrix(merged.bwRatesBySizeGsm, DEFAULT_PRICING_SETTINGS.bwRatesBySizeGsm, sizes, gsms),
+        colorRatesBySizeGsm: buildMatrix(merged.colorRatesBySizeGsm, DEFAULT_PRICING_SETTINGS.colorRatesBySizeGsm, sizes, gsms),
+        sheetWeightBySizeGsm: buildMatrix(merged.sheetWeightBySizeGsm, DEFAULT_PRICING_SETTINGS.sheetWeightBySizeGsm, sizes, gsms),
+    };
+
+    if (!sizes.includes(result.defaultPageSize)) {
+        result.defaultPageSize = sizes[0] || DEFAULT_PRICING_SETTINGS.defaultPageSize;
+    }
+    if (!gsms.includes(result.defaultGsm)) {
+        result.defaultGsm = gsms[0] || DEFAULT_PRICING_SETTINGS.defaultGsm;
+    }
+    if (!Object.keys(result.paperMultipliers).includes(result.defaultPaperType)) {
+        result.defaultPaperType = Object.keys(result.paperMultipliers)[0] || DEFAULT_PRICING_SETTINGS.defaultPaperType;
+    }
+    if (!Object.keys(result.bindingCharges).includes(result.defaultBindingType)) {
+        result.defaultBindingType = Object.keys(result.bindingCharges)[0] || DEFAULT_PRICING_SETTINGS.defaultBindingType;
+    }
+
+    return result;
+}
+
 export interface SaveSettingsResult {
-    storage: 'firebase' | 'local';
+    storage: 'backend' | 'local';
     warning?: string;
 }
 
 export const SettingsService = {
     async getPricingSettings(): Promise<PrintPricingSettings> {
-        const ref = doc(db, COLLECTION_NAME, DOC_ID);
-        const localSettings = readLocalSettings();
+        const local = readLocalSettings();
         try {
-            const snapshot = await getDoc(ref);
-
-            if (!snapshot.exists()) {
-                await setDoc(ref, DEFAULT_PRICING_SETTINGS);
-                writeLocalSettings(DEFAULT_PRICING_SETTINGS);
-                return DEFAULT_PRICING_SETTINGS;
-            }
-
-            const remoteSettings = sanitizeSettings(snapshot.data() as Partial<PrintPricingSettings>);
-            writeLocalSettings(remoteSettings);
-            return remoteSettings;
+            const response = await fetchApi('/settings/pricing');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const remote = sanitizeSettings(await response.json());
+            writeLocalSettings(remote);
+            return remote;
         } catch (_error) {
-            if (localSettings) return localSettings;
+            if (local) return local;
             return DEFAULT_PRICING_SETTINGS;
         }
     },
@@ -258,16 +279,24 @@ export const SettingsService = {
     async savePricingSettings(settings: PrintPricingSettings): Promise<SaveSettingsResult> {
         const sanitized = sanitizeSettings(settings);
         writeLocalSettings(sanitized);
-        const ref = doc(db, COLLECTION_NAME, DOC_ID);
+
         try {
-            await setDoc(ref, sanitized);
-            return { storage: 'firebase' };
+            const response = await fetchApi('/settings/pricing', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sanitized),
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(body.error || `HTTP ${response.status}`);
+            }
+            return { storage: 'backend' };
         } catch (error: any) {
-            const firebaseCode = error?.code ? String(error.code) : 'unknown-error';
             return {
                 storage: 'local',
-                warning: `Saved locally. Firebase sync failed (${firebaseCode}). Deploy rules or check connectivity.`,
+                warning: `Saved locally. Backend sync failed (${error?.message || 'unknown'}).`,
             };
         }
     },
 };
+

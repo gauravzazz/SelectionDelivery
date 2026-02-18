@@ -47,6 +47,16 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
     const [pricingSettings, setPricingSettings] = useState<PrintPricingSettings>(DEFAULT_PRICING_SETTINGS);
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+    const availableSizes = useMemo(
+        () =>
+            Array.from(
+                new Set([
+                    ...Object.keys(pricingSettings.bwRatesBySizeGsm || {}),
+                    ...Object.keys(pricingSettings.colorRatesBySizeGsm || {}),
+                ]),
+            ),
+        [pricingSettings.bwRatesBySizeGsm, pricingSettings.colorRatesBySizeGsm],
+    );
 
     const [customForm, setCustomForm] = useState({
         title: 'Custom Print Job',
@@ -356,7 +366,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                 value={customForm.pageSize}
                                 onChange={(e) => setCustomForm((prev) => ({ ...prev, pageSize: e.target.value }))}
                             >
-                                {Object.keys(pricingSettings.sizeMultipliers).map((size) => (
+                                {availableSizes.map((size) => (
                                     <option key={size} value={size}>
                                         {size}
                                     </option>
@@ -541,7 +551,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                         )
                                     }
                                 >
-                                    {Object.keys(pricingSettings.sizeMultipliers).map((size) => (
+                                    {availableSizes.map((size) => (
                                         <option key={size} value={size}>
                                             {size}
                                         </option>

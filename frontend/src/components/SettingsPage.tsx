@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     DEFAULT_PRICING_SETTINGS,
     PrintPricingSettings,
@@ -27,7 +27,7 @@ const SettingsPage: React.FC = () => {
                 console.error('Failed to load settings', error);
                 setSyncMessage({
                     type: 'warn',
-                    text: 'Could not load from Firebase. Using local/default settings.',
+                    text: 'Could not load from backend. Using local/default settings.',
                 });
             } finally {
                 setLoading(false);
@@ -36,17 +36,13 @@ const SettingsPage: React.FC = () => {
         load();
     }, []);
 
+    const sizes = useMemo(
+        () => Array.from(new Set([...Object.keys(settings.bwRatesBySizeGsm), ...Object.keys(settings.colorRatesBySizeGsm)])),
+        [settings.bwRatesBySizeGsm, settings.colorRatesBySizeGsm],
+    );
+
     const setMapNumber = (
-        key: keyof Pick<
-            PrintPricingSettings,
-            | 'sizeMultipliers'
-            | 'paperMultipliers'
-            | 'bindingCharges'
-            | 'baseWeightBySize'
-            | 'bindingWeightGrams'
-            | 'gsmPriceMultipliers'
-            | 'gsmWeightMultipliers'
-        >,
+        key: 'paperMultipliers' | 'bindingCharges' | 'bindingWeightGrams',
         mapKey: string,
         value: string,
     ) => {
@@ -60,7 +56,7 @@ const SettingsPage: React.FC = () => {
     };
 
     const setRateMatrixNumber = (
-        key: 'bwRatesBySizeGsm' | 'colorRatesBySizeGsm',
+        key: 'bwRatesBySizeGsm' | 'colorRatesBySizeGsm' | 'sheetWeightBySizeGsm',
         size: string,
         gsm: string,
         value: string,
@@ -82,8 +78,8 @@ const SettingsPage: React.FC = () => {
         try {
             const result = await SettingsService.savePricingSettings(settings);
             setSavedAt(new Date().toLocaleString('en-IN'));
-            if (result.storage === 'firebase') {
-                setSyncMessage({ type: 'ok', text: 'Settings saved to Firebase and local cache.' });
+            if (result.storage === 'backend') {
+                setSyncMessage({ type: 'ok', text: 'Settings saved to backend and local cache.' });
             } else {
                 setSyncMessage({
                     type: 'warn',
@@ -98,40 +94,9 @@ const SettingsPage: React.FC = () => {
         }
     };
 
-    const renderMapEditor = (
-        title: string,
-        key: keyof Pick<
-            PrintPricingSettings,
-            | 'sizeMultipliers'
-            | 'paperMultipliers'
-            | 'bindingCharges'
-            | 'baseWeightBySize'
-            | 'bindingWeightGrams'
-            | 'gsmPriceMultipliers'
-            | 'gsmWeightMultipliers'
-        >,
-    ) => (
-        <div className="settings-card glass-panel">
-            <h4>{title}</h4>
-            <div className="settings-grid">
-                {Object.entries(settings[key]).map(([entryKey, entryValue]) => (
-                    <label key={`${String(key)}-${entryKey}`} className="settings-field">
-                        <span>{entryKey}</span>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={entryValue}
-                            onChange={(e) => setMapNumber(key, entryKey, e.target.value)}
-                        />
-                    </label>
-                ))}
-            </div>
-        </div>
-    );
-
     const renderRateMatrix = (
         title: string,
-        key: 'bwRatesBySizeGsm' | 'colorRatesBySizeGsm',
+        key: 'bwRatesBySizeGsm' | 'colorRatesBySizeGsm' | 'sheetWeightBySizeGsm',
     ) => (
         <div className="settings-card glass-panel">
             <h4>{title}</h4>
@@ -146,7 +111,7 @@ const SettingsPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.keys(settings.sizeMultipliers).map((size) => (
+                        {sizes.map((size) => (
                             <tr key={`${key}-${size}`}>
                                 <td>{size}</td>
                                 {settings.gsmOptions.map((gsm) => (
@@ -167,6 +132,28 @@ const SettingsPage: React.FC = () => {
         </div>
     );
 
+    const renderMapEditor = (
+        title: string,
+        key: 'paperMultipliers' | 'bindingCharges' | 'bindingWeightGrams',
+    ) => (
+        <div className="settings-card glass-panel">
+            <h4>{title}</h4>
+            <div className="settings-grid">
+                {Object.entries(settings[key]).map(([entryKey, entryValue]) => (
+                    <label key={`${String(key)}-${entryKey}`} className="settings-field">
+                        <span>{entryKey}</span>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={entryValue}
+                            onChange={(e) => setMapNumber(key, entryKey, e.target.value)}
+                        />
+                    </label>
+                ))}
+            </div>
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="settings-page">
@@ -180,7 +167,7 @@ const SettingsPage: React.FC = () => {
             <div className="settings-header">
                 <div>
                     <h3>Print Pricing Settings</h3>
-                    <p>Used for custom print job pricing and shipping weight estimates.</p>
+                    <p>Matrix-based pricing on top. Simplified controls for mobile usage.</p>
                 </div>
                 <div className="settings-header-actions">
                     <button
@@ -199,31 +186,13 @@ const SettingsPage: React.FC = () => {
             {savedAt && <div className="save-meta">Last saved: {savedAt}</div>}
             {syncMessage && <div className={`sync-message ${syncMessage.type}`}>{syncMessage.text}</div>}
 
+            {renderRateMatrix('B&W Rate Matrix (Size x GSM)', 'bwRatesBySizeGsm')}
+            {renderRateMatrix('Color Rate Matrix (Size x GSM)', 'colorRatesBySizeGsm')}
+            {renderRateMatrix('Sheet Weight Matrix (grams/sheet)', 'sheetWeightBySizeGsm')}
+
             <div className="settings-card glass-panel">
-                <h4>Base Pricing Fallback (used only if matrix value missing)</h4>
+                <h4>Charges</h4>
                 <div className="settings-grid">
-                    <label className="settings-field">
-                        <span>B&W per page (₹)</span>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={settings.bwPageRate}
-                            onChange={(e) =>
-                                setSettings((prev) => ({ ...prev, bwPageRate: toNumber(e.target.value) }))
-                            }
-                        />
-                    </label>
-                    <label className="settings-field">
-                        <span>Color per page (₹)</span>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={settings.colorPageRate}
-                            onChange={(e) =>
-                                setSettings((prev) => ({ ...prev, colorPageRate: toNumber(e.target.value) }))
-                            }
-                        />
-                    </label>
                     <label className="settings-field">
                         <span>Minimum order charge (₹)</span>
                         <input
@@ -260,15 +229,9 @@ const SettingsPage: React.FC = () => {
                 </div>
             </div>
 
-            {renderMapEditor('Size Multipliers', 'sizeMultipliers')}
-            {renderMapEditor('GSM Price Multipliers', 'gsmPriceMultipliers')}
-            {renderMapEditor('GSM Weight Multipliers', 'gsmWeightMultipliers')}
             {renderMapEditor('Paper Multipliers', 'paperMultipliers')}
             {renderMapEditor('Binding Charges (₹)', 'bindingCharges')}
-            {renderMapEditor('Base Weight By Size (grams/sheet)', 'baseWeightBySize')}
             {renderMapEditor('Binding Weight (grams)', 'bindingWeightGrams')}
-            {renderRateMatrix('B&W Per-Page Rate Matrix (Size x GSM)', 'bwRatesBySizeGsm')}
-            {renderRateMatrix('Color Per-Page Rate Matrix (Size x GSM)', 'colorRatesBySizeGsm')}
 
             <div className="settings-card glass-panel">
                 <h4>Defaults for New Custom Jobs</h4>
@@ -281,7 +244,7 @@ const SettingsPage: React.FC = () => {
                                 setSettings((prev) => ({ ...prev, defaultPageSize: e.target.value }))
                             }
                         >
-                            {Object.keys(settings.sizeMultipliers).map((size) => (
+                            {sizes.map((size) => (
                                 <option key={size} value={size}>
                                     {size}
                                 </option>
@@ -340,3 +303,4 @@ const SettingsPage: React.FC = () => {
 };
 
 export default SettingsPage;
+
