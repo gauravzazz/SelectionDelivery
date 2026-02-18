@@ -8,6 +8,7 @@ export interface MessageTemplate {
 }
 
 const COLLECTION_NAME = 'message_templates';
+const LOCAL_TEMPLATES_KEY = 'messageTemplatesLocal';
 
 export const MESSAGE_TEMPLATE_SAMPLES: Array<Omit<MessageTemplate, 'id'>> = [
     {
@@ -83,43 +84,222 @@ export const MESSAGE_TEMPLATE_SAMPLES: Array<Omit<MessageTemplate, 'id'>> = [
 const DEFAULT_TEMPLATES = MESSAGE_TEMPLATE_SAMPLES;
 
 const normalizeTitle = (title: string) => title.trim().toLowerCase();
+const slugify = (value: string) =>
+    value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'template';
+
+function createLocalTemplateId(prefix: string): string {
+    return `local-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeTemplate(
+    raw: any,
+    fallbackId: string,
+): MessageTemplate | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const title = typeof raw.title === 'string' ? raw.title.trim() : '';
+    const text = typeof raw.text === 'string' ? raw.text.trim() : '';
+    if (!title || !text) return null;
+    const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : fallbackId;
+    return { id, title, text };
+}
+
+function normalizeTemplateList(rawList: any[]): MessageTemplate[] {
+    const seenIds = new Set<string>();
+    const normalized: MessageTemplate[] = [];
+
+    rawList.forEach((entry, index) => {
+        const fallbackId = createLocalTemplateId(`entry-${index}`);
+        const parsed = normalizeTemplate(entry, fallbackId);
+        if (!parsed) return;
+        let nextId = parsed.id;
+        while (seenIds.has(nextId)) {
+            nextId = createLocalTemplateId('dup');
+        }
+        seenIds.add(nextId);
+        normalized.push({ ...parsed, id: nextId });
+    });
+
+    return normalized;
+}
+
+function ensureDefaultTemplates(templates: MessageTemplate[]): MessageTemplate[] {
+    const byTitle = new Set(templates.map((template) => normalizeTitle(template.title)));
+    const byId = new Set(templates.map((template) => template.id));
+    const merged = [...templates];
+
+    DEFAULT_TEMPLATES.forEach((template, index) => {
+        if (byTitle.has(normalizeTitle(template.title))) return;
+        let id = `default-${slugify(template.title)}`;
+        if (!id) id = `default-${index + 1}`;
+        while (byId.has(id)) {
+            id = `${id}-${index + 1}`;
+        }
+        byId.add(id);
+        byTitle.add(normalizeTitle(template.title));
+        merged.push({
+            id,
+            title: template.title,
+            text: template.text,
+        });
+    });
+
+    return merged;
+}
+
+function readLocalTemplates(): MessageTemplate[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = localStorage.getItem(LOCAL_TEMPLATES_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return ensureDefaultTemplates(normalizeTemplateList(parsed));
+    } catch (_error) {
+        return [];
+    }
+}
+
+function writeLocalTemplates(templates: MessageTemplate[]): void {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(LOCAL_TEMPLATES_KEY, JSON.stringify(templates));
+    } catch (_error) {
+        // Ignore local storage failures.
+    }
+}
+
+function upsertLocalTemplate(template: MessageTemplate): MessageTemplate[] {
+    const existing = readLocalTemplates();
+    const index = existing.findIndex((item) => item.id === template.id);
+    const next = [...existing];
+    if (index >= 0) {
+        next[index] = template;
+    } else {
+        next.push(template);
+    }
+    const merged = ensureDefaultTemplates(next);
+    writeLocalTemplates(merged);
+    return merged;
+}
+
+function removeLocalTemplate(id: string): MessageTemplate[] {
+    const existing = readLocalTemplates();
+    const next = existing.filter((template) => template.id !== id);
+    writeLocalTemplates(next);
+    return next;
+}
+
+async function fetchRemoteTemplates(): Promise<MessageTemplate[]> {
+    const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+    const remote = normalizeTemplateList(
+        snapshot.docs.map((docRef) => ({ id: docRef.id, ...docRef.data() })),
+    );
+    const existingTitles = new Set(remote.map((template) => normalizeTitle(template.title)));
+
+    const missingDefaults = DEFAULT_TEMPLATES.filter(
+        (template) => !existingTitles.has(normalizeTitle(template.title)),
+    );
+
+    if (missingDefaults.length > 0) {
+        try {
+            await Promise.all(
+                missingDefaults.map((template) => addDoc(collection(db, COLLECTION_NAME), template)),
+            );
+            const refreshedSnapshot = await getDocs(collection(db, COLLECTION_NAME));
+            return normalizeTemplateList(
+                refreshedSnapshot.docs.map((docRef) => ({ id: docRef.id, ...docRef.data() })),
+            );
+        } catch (error) {
+            console.warn('Failed to seed default templates in Firestore, using local defaults.', error);
+        }
+    }
+
+    return ensureDefaultTemplates(remote);
+}
 
 export const MessageService = {
     getAll: async (): Promise<MessageTemplate[]> => {
-        await MessageService.ensureDefaults();
-        const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-        return snapshot.docs.map((docRef) => ({ id: docRef.id, ...docRef.data() } as MessageTemplate));
+        const local = readLocalTemplates();
+        try {
+            const remote = await fetchRemoteTemplates();
+            const merged = ensureDefaultTemplates(remote);
+            writeLocalTemplates(merged);
+            return merged;
+        } catch (error) {
+            console.warn('Using local message templates because Firestore read failed.', error);
+            const fallback = local.length > 0 ? local : ensureDefaultTemplates([]);
+            writeLocalTemplates(fallback);
+            return fallback;
+        }
     },
 
     save: async (template: MessageTemplate) => {
-        await setDoc(doc(db, COLLECTION_NAME, template.id), {
-            title: template.title,
-            text: template.text
-        });
+        const normalized = normalizeTemplate(template, template.id || createLocalTemplateId('save'));
+        if (!normalized) return;
+        upsertLocalTemplate(normalized);
+        try {
+            await setDoc(doc(db, COLLECTION_NAME, normalized.id), {
+                title: normalized.title,
+                text: normalized.text,
+            });
+        } catch (error) {
+            console.warn('Failed to sync template to Firestore, kept local copy.', error);
+        }
     },
 
     add: async (title: string, text: string) => {
-        const ref = await addDoc(collection(db, COLLECTION_NAME), { title, text });
-        return { id: ref.id, title, text };
+        const localTemplate = normalizeTemplate(
+            {
+                id: createLocalTemplateId('add'),
+                title,
+                text,
+            },
+            createLocalTemplateId('add'),
+        );
+        if (!localTemplate) {
+            return {
+                id: createLocalTemplateId('invalid'),
+                title: title.trim(),
+                text: text.trim(),
+            };
+        }
+
+        upsertLocalTemplate(localTemplate);
+        try {
+            const ref = await addDoc(collection(db, COLLECTION_NAME), {
+                title: localTemplate.title,
+                text: localTemplate.text,
+            });
+            const remoteTemplate = { ...localTemplate, id: ref.id };
+            removeLocalTemplate(localTemplate.id);
+            upsertLocalTemplate(remoteTemplate);
+            return remoteTemplate;
+        } catch (error) {
+            console.warn('Failed to add template in Firestore, kept local copy.', error);
+            return localTemplate;
+        }
     },
 
     delete: async (id: string) => {
-        await deleteDoc(doc(db, COLLECTION_NAME, id));
+        removeLocalTemplate(id);
+        try {
+            await deleteDoc(doc(db, COLLECTION_NAME, id));
+        } catch (error) {
+            console.warn('Failed to delete template in Firestore, removed local copy only.', error);
+        }
     },
 
     ensureDefaults: async () => {
-        const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-        const existingTitles = new Set(
-            snapshot.docs
-                .map((docRef) => String(docRef.data().title || ''))
-                .filter(Boolean)
-                .map(normalizeTitle),
-        );
-
-        for (const template of DEFAULT_TEMPLATES) {
-            if (!existingTitles.has(normalizeTitle(template.title))) {
-                await addDoc(collection(db, COLLECTION_NAME), template);
-            }
+        const existing = readLocalTemplates();
+        writeLocalTemplates(ensureDefaultTemplates(existing));
+        try {
+            await fetchRemoteTemplates();
+        } catch (error) {
+            console.warn('Could not ensure remote defaults. Local defaults are active.', error);
         }
     },
 
