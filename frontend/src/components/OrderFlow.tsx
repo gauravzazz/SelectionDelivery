@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageService, MessageTemplate } from '../api/messageApi';
-import { OrderService, OrderAddress, OrderItem, parseAddress } from '../api/orderApi';
+import { OrderService, OrderAddress, OrderItem, OrderStage, parseAddress } from '../api/orderApi';
 import { fetchShippingQuote, QuoteResponse } from '../api/shippingApi';
 import CourierModal from './CourierModal';
+import { getStageLabel, pickSuggestedTemplate, sortTemplatesByStage } from '../engine/templateSuggestions';
+import { addHoursIso, readFollowUpHours } from '../engine/followupScheduler';
 import './OrderFlow.css';
 
 interface OrderFlowProps {
@@ -73,10 +75,22 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             : null,
     );
     const [quotedPincode, setQuotedPincode] = useState(address.pincode || '');
+    const [quotedWeight, setQuotedWeight] = useState(weightGrams);
+    const [quotedItemMixSignature, setQuotedItemMixSignature] = useState('');
+    const [autoRequoteNote, setAutoRequoteNote] = useState('');
     const [isPaid, setIsPaid] = useState(false);
     const [paymentMode, setPaymentMode] = useState<'upi' | 'cash' | 'bank' | 'other'>('upi');
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
+    const [templatePinnedByUser, setTemplatePinnedByUser] = useState(false);
+    const itemMixSignature = useMemo(
+        () =>
+            items
+                .map((item) => `${item.bookId}:${item.variant}:${item.quantity}:${item.pageCount}`)
+                .sort()
+                .join('|'),
+        [items],
+    );
 
     useEffect(() => {
         const loadTemplates = async () => {
@@ -104,6 +118,58 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             charge: shippingCharge,
         };
     }, [selectedCourier, selectedCourierId, courierName, shippingCharge]);
+
+    useEffect(() => {
+        if (!quotedItemMixSignature) {
+            setQuotedItemMixSignature(itemMixSignature);
+        }
+    }, [quotedItemMixSignature, itemMixSignature]);
+
+    const messagingStage = useMemo<OrderStage>(() => {
+        if (isPaid) return 'paid';
+
+        const hasAddressFields = Boolean(
+            address.name.trim()
+            && /^\d{10}$/.test(address.phone.trim())
+            && /^\d{6}$/.test(address.pincode.trim())
+            && address.fullAddress.trim(),
+        );
+        if (!hasAddressFields) return 'awaiting_address';
+
+        const hasShipping = Boolean(activeShipping.courierName && activeShipping.courierName !== 'TBD');
+        if (!hasShipping) return 'address_captured';
+
+        return 'awaiting_payment';
+    }, [isPaid, address, activeShipping.courierName]);
+
+    const orderedTemplates = useMemo(
+        () => sortTemplatesByStage(templates, messagingStage),
+        [templates, messagingStage],
+    );
+    const suggestedTemplate = useMemo(
+        () => pickSuggestedTemplate(templates, messagingStage),
+        [templates, messagingStage],
+    );
+
+    useEffect(() => {
+        if (templatePinnedByUser) return;
+        if (!templates.length) {
+            if (selectedTemplateId) setSelectedTemplateId('');
+            return;
+        }
+
+        const validSelected = templates.some((template) => template.id === selectedTemplateId);
+        if (suggestedTemplate) {
+            if (selectedTemplateId !== suggestedTemplate.id) {
+                setSelectedTemplateId(suggestedTemplate.id);
+            }
+            return;
+        }
+
+        if (!validSelected && selectedTemplateId) {
+            setSelectedTemplateId('');
+        }
+    }, [templatePinnedByUser, templates, suggestedTemplate, selectedTemplateId]);
 
     const recomputedGrandTotal = useMemo(() => {
         if (adjustmentType === 'markup') {
@@ -141,9 +207,12 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
         const templated = replaceTemplateTokens(selectedTemplate.text, {
             name: address.name || 'Customer',
             grandTotal: recomputedGrandTotal.toString(),
+            courier: activeShipping.courierName || '',
+            shipping: String(activeShipping.charge || 0),
             trackingCourier: activeShipping.courierName || '',
             trackingId: '',
             trackingLink: '',
+            orderId: '',
         });
 
         return encodeURIComponent(`${templated}\n\n${summary}`);
@@ -188,9 +257,11 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
         setStep('review');
     };
 
-    const recalculateShipping = async () => {
+    const recalculateShipping = async (opts?: { auto?: boolean; reason?: string }) => {
         if (!address.pincode || !/^\d{6}$/.test(address.pincode)) {
-            alert('Enter valid 6-digit pincode to fetch shipping.');
+            if (!opts?.auto) {
+                alert('Enter valid 6-digit pincode to fetch shipping.');
+            }
             return;
         }
         setShippingLoading(true);
@@ -201,17 +272,65 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             });
             setShippingQuotes(quote);
             if (quote.allOptions.length > 0) {
-                setSelectedCourier(quote.cheapest);
-                setShowCourierModal(true);
+                const preferred =
+                    selectedCourier
+                        ? quote.allOptions.find((opt) => opt.courierId === selectedCourier.courierId)
+                        : null;
+                setSelectedCourier(preferred || quote.cheapest);
+                if (!opts?.auto) {
+                    setShowCourierModal(true);
+                }
                 setQuotedPincode(address.pincode);
+                setQuotedWeight(weightGrams);
+                setQuotedItemMixSignature(itemMixSignature);
+                if (opts?.auto && opts.reason) {
+                    setAutoRequoteNote(`Shipping auto-requoted because ${opts.reason}.`);
+                } else {
+                    setAutoRequoteNote('');
+                }
             }
         } catch (error) {
             console.error('Shipping quote failed', error);
-            alert('Failed to fetch shipping options for this pincode.');
+            if (!opts?.auto) {
+                alert('Failed to fetch shipping options for this pincode.');
+            }
         } finally {
             setShippingLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (shippingLoading) return;
+        const hasShippingContext = Boolean(selectedCourier || (activeShipping.courierName && activeShipping.courierName !== 'TBD'));
+        if (!hasShippingContext) return;
+        if (!/^\d{6}$/.test(address.pincode || '')) return;
+
+        const pincodeChanged = Boolean(quotedPincode && quotedPincode !== address.pincode);
+        const weightChanged = quotedWeight !== weightGrams;
+        const itemMixChanged = Boolean(quotedItemMixSignature && quotedItemMixSignature !== itemMixSignature);
+        if (!pincodeChanged && !weightChanged && !itemMixChanged) return;
+
+        let reason = 'order details changed';
+        if (pincodeChanged) reason = 'pincode changed';
+        else if (weightChanged) reason = 'weight changed';
+        else if (itemMixChanged) reason = 'item mix changed';
+
+        const timer = window.setTimeout(() => {
+            void recalculateShipping({ auto: true, reason });
+        }, 500);
+
+        return () => window.clearTimeout(timer);
+    }, [
+        shippingLoading,
+        selectedCourier,
+        activeShipping.courierName,
+        address.pincode,
+        quotedPincode,
+        quotedWeight,
+        weightGrams,
+        quotedItemMixSignature,
+        itemMixSignature,
+    ]);
 
     const handleSaveDraft = async () => {
         if (!address.name || !address.phone || !address.fullAddress || !address.pincode) {
@@ -242,6 +361,17 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                 paymentStatus: isPaid ? 'paid' : 'pending',
                 paymentMode,
             };
+            const followUpAfterHours = readFollowUpHours();
+            draftPayload.followUpAfterHours = followUpAfterHours;
+            if (isPaid) {
+                draftPayload.followUpStatus = 'done';
+            } else {
+                const nowIso = new Date().toISOString();
+                draftPayload.lastOutboundMessageAt = nowIso;
+                draftPayload.nextFollowUpAt = addHoursIso(nowIso, followUpAfterHours);
+                draftPayload.followUpStatus = 'scheduled';
+                draftPayload.followUpCount = 0;
+            }
             if (isPaid) {
                 draftPayload.paidAt = new Date().toISOString();
             }
@@ -384,11 +514,14 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                     />
                 </div>
                 <div className="shipping-recalc-row">
-                    <button className="btn-secondary-flow" onClick={recalculateShipping} disabled={shippingLoading}>
+                    <button className="btn-secondary-flow" onClick={() => void recalculateShipping()} disabled={shippingLoading}>
                         {shippingLoading ? 'Checking Shipping...' : 'Recalculate Shipping for Address'}
                     </button>
                     {needsShippingRecalc && (
                         <span className="recalc-hint">Pincode changed. Recalculate shipping before confirming.</span>
+                    )}
+                    {autoRequoteNote && !needsShippingRecalc && (
+                        <span className="recalc-info">{autoRequoteNote}</span>
                     )}
                 </div>
             </div>
@@ -458,11 +591,34 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
                 <h4>Share Quote / Draft Message</h4>
                 <div className="message-template-row">
                     <label>Template</label>
-                    <select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
+                    <div className="template-suggestion-row">
+                        <span>
+                            Suggested for {getStageLabel(messagingStage)}: {suggestedTemplate?.title || 'Auto summary'}
+                        </span>
+                        {templatePinnedByUser && suggestedTemplate && selectedTemplateId !== suggestedTemplate.id && (
+                            <button
+                                type="button"
+                                className="use-suggested-btn"
+                                onClick={() => {
+                                    setTemplatePinnedByUser(false);
+                                    setSelectedTemplateId(suggestedTemplate.id);
+                                }}
+                            >
+                                Use Suggested
+                            </button>
+                        )}
+                    </div>
+                    <select
+                        value={selectedTemplateId}
+                        onChange={(e) => {
+                            setTemplatePinnedByUser(true);
+                            setSelectedTemplateId(e.target.value);
+                        }}
+                    >
                         <option value="">Use auto summary</option>
-                        {templates.map((template) => (
+                        {orderedTemplates.map((template) => (
                             <option key={template.id} value={template.id}>
-                                {template.title}
+                                {suggestedTemplate?.id === template.id ? `⭐ ${template.title}` : template.title}
                             </option>
                         ))}
                     </select>

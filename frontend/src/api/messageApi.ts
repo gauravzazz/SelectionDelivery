@@ -9,7 +9,27 @@ export interface MessageTemplate {
 
 const COLLECTION_NAME = 'message_templates';
 
-const DEFAULT_TEMPLATES: Array<Omit<MessageTemplate, 'id'>> = [
+export const MESSAGE_TEMPLATE_SAMPLES: Array<Omit<MessageTemplate, 'id'>> = [
+    {
+        title: 'Quote Shared',
+        text: "Hi {name}, your print quote is ready. Grand total is Rs {grandTotal}. Reply YES to proceed.",
+    },
+    {
+        title: 'Ask Pincode',
+        text: "Hi {name}, please share 6-digit delivery pincode so I can check the best courier option.",
+    },
+    {
+        title: 'Shipping Option',
+        text: "Best shipping option for your order: {courier} (Rs {shipping}). Updated total: Rs {grandTotal}.",
+    },
+    {
+        title: 'Ask Full Address',
+        text: "Please share full delivery address in one message: Name, Phone, House/Street, Area, City, State, Pincode.",
+    },
+    {
+        title: 'Missing Details Follow-up',
+        text: "Hi {name}, to complete your order I still need missing details. Please share complete address and active mobile number.",
+    },
     {
         title: 'Draft Reminder',
         text: "Hi {name}, your draft order is ready. Share your address and we will proceed quickly.",
@@ -17,6 +37,22 @@ const DEFAULT_TEMPLATES: Array<Omit<MessageTemplate, 'id'>> = [
     {
         title: 'Payment Details',
         text: "Hi {name}, your total amount is ₹{grandTotal}. Please complete payment and share screenshot to confirm your order.",
+    },
+    {
+        title: 'Payment Reminder',
+        text: "Quick reminder: payment of Rs {grandTotal} is pending for your order. Share screenshot once paid.",
+    },
+    {
+        title: 'Payment Received',
+        text: "Payment received successfully. Thank you {name}. We are starting your print job now.",
+    },
+    {
+        title: 'Printing Started',
+        text: "Update: your order is in printing stage. We will notify you once it is packed and ready to ship.",
+    },
+    {
+        title: 'Ready To Ship',
+        text: "Your order is printed and packed. We are creating shipment now and will share tracking details shortly.",
     },
     {
         title: 'Thank You',
@@ -43,6 +79,8 @@ const DEFAULT_TEMPLATES: Array<Omit<MessageTemplate, 'id'>> = [
         text: "Hi {name}, thank you for ordering with us. Please share your feedback and rating.",
     },
 ];
+
+const DEFAULT_TEMPLATES = MESSAGE_TEMPLATE_SAMPLES;
 
 const normalizeTitle = (title: string) => title.trim().toLowerCase();
 

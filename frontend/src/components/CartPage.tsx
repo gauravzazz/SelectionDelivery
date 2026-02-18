@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useBookContext } from '../context/BookContext';
 import { fetchShippingQuote, QuoteResponse } from '../api/shippingApi';
 import { OrderItem } from '../api/orderApi';
 import { MessageService, MessageTemplate } from '../api/messageApi';
 import { SettingsService, DEFAULT_PRICING_SETTINGS, PrintPricingSettings } from '../api/settingsApi';
 import { calculateCustomPricing } from '../engine/customPricing';
+import { BookService } from '../api/bookApi';
 import CourierModal from './CourierModal';
 import './CartPage.css';
 
@@ -29,6 +30,46 @@ function replaceTemplateTokens(template: string, tokens: Record<string, string>)
     );
 }
 
+interface QuoteBasis {
+    pincode: string;
+    weightGrams: number;
+    itemMixSignature: string;
+    fingerprint: string;
+}
+
+function buildItemMixSignature(
+    catalogItems: Array<{ book: { id: string }; variant: 'color' | 'bw'; quantity: number }>,
+    customItems: Array<{
+        id: string;
+        quantity: number;
+        pageCount: number;
+        printMode: 'color' | 'bw';
+        pageSize: string;
+        gsm: string;
+        paperType: string;
+        bindingType: string;
+    }>,
+): string {
+    const catalogSig = [...catalogItems]
+        .map((item) => `${item.book.id}:${item.variant}:${item.quantity}`)
+        .sort()
+        .join('|');
+    const customSig = [...customItems]
+        .map((item) =>
+            `${item.id}:${item.quantity}:${item.pageCount}:${item.printMode}:${item.pageSize}:${item.gsm}:${item.paperType}:${item.bindingType}`,
+        )
+        .sort()
+        .join('|');
+    return `${catalogSig}||${customSig}`;
+}
+
+function getQuoteChangeReason(previous: QuoteBasis, current: QuoteBasis): string {
+    if (previous.pincode !== current.pincode) return 'pincode changed';
+    if (previous.itemMixSignature !== current.itemMixSignature) return 'item mix changed';
+    if (previous.weightGrams !== current.weightGrams) return 'weight changed';
+    return 'cart data changed';
+}
+
 const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
     const {
         customCart,
@@ -40,6 +81,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
         updateCustomItem,
         updateCustomQuantity,
         removeCustomFromCart,
+        refreshBooks,
     } = useBookContext();
     const catalogCartItems = getCartDetails();
     const [customBuilderOpen, setCustomBuilderOpen] = useState(catalogCartItems.length === 0);
@@ -115,9 +157,40 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
     const [error, setError] = useState('');
     const [showCourierModal, setShowCourierModal] = useState(false);
     const [selectedCourier, setSelectedCourier] = useState<QuoteResponse['allOptions'][0] | null>(null);
+    const [autoQuoteNotice, setAutoQuoteNotice] = useState('');
+    const [lastQuotedBasis, setLastQuotedBasis] = useState<QuoteBasis | null>(null);
+    const quoteRequestIdRef = useRef(0);
 
     const [adjustment, setAdjustment] = useState(0);
     const [adjustmentType, setAdjustmentType] = useState<'discount' | 'markup'>('discount');
+    const [savingCustomCatalogId, setSavingCustomCatalogId] = useState<string | null>(null);
+
+    const itemMixSignature = useMemo(
+        () =>
+            buildItemMixSignature(
+                catalogCartItems.map((item) => ({ book: { id: item.book.id }, variant: item.variant, quantity: item.quantity })),
+                customCart.map((item) => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                    pageCount: item.pageCount,
+                    printMode: item.printMode,
+                    pageSize: item.pageSize,
+                    gsm: item.gsm || pricingSettings.defaultGsm,
+                    paperType: item.paperType,
+                    bindingType: item.bindingType,
+                })),
+            ),
+        [catalogCartItems, customCart, pricingSettings.defaultGsm],
+    );
+    const currentQuoteBasis = useMemo<QuoteBasis>(
+        () => ({
+            pincode,
+            weightGrams: totals.weight,
+            itemMixSignature,
+            fingerprint: `${pincode}|${totals.weight}|${itemMixSignature}`,
+        }),
+        [pincode, totals.weight, itemMixSignature],
+    );
 
     const handleAddCustom = () => {
         if (customForm.pageCount <= 0 || customForm.quantity <= 0) {
@@ -178,44 +251,145 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
             unitPrice: recalculated.unitPrice,
             unitWeightGrams: recalculated.unitWeightGrams,
         });
-
-        if (shippingQuote) {
-            setShippingQuote(null);
-            setSelectedCourier(null);
-        }
     };
 
-    const handleCalculateShipping = async () => {
+    const requestShippingQuote = async (opts: { auto: boolean; reason?: string }) => {
         if (!pincode || pincode.length !== 6) {
-            setError('Enter valid 6-digit pincode');
-            return;
+            if (!opts.auto) setError('Enter valid 6-digit pincode');
+            return false;
         }
         if (totals.weight <= 0) {
-            setError('Cart weight is zero. Add at least one item.');
-            return;
+            if (!opts.auto) setError('Cart weight is zero. Add at least one item.');
+            return false;
         }
+
+        const requestId = ++quoteRequestIdRef.current;
         setLoadingQuote(true);
-        setError('');
-        setShippingQuote(null);
-        setSelectedCourier(null);
+        if (!opts.auto) {
+            setError('');
+            setAutoQuoteNotice('');
+        }
 
         try {
             const quote = await fetchShippingQuote({
                 destinationPincode: pincode,
                 weightGrams: totals.weight,
             });
+            if (requestId !== quoteRequestIdRef.current) return false;
             setShippingQuote(quote);
+            setLastQuotedBasis(currentQuoteBasis);
 
-            if (quote.allOptions.length > 0) {
-                setSelectedCourier(quote.cheapest);
+            const preferredCourier =
+                selectedCourier
+                    ? quote.allOptions.find((opt) => opt.courierId === selectedCourier.courierId)
+                    : null;
+            setSelectedCourier(preferredCourier || quote.cheapest);
+
+            if (!opts.auto && quote.allOptions.length > 0) {
                 setShowCourierModal(true);
             }
+
+            if (opts.auto && opts.reason) {
+                setAutoQuoteNotice(`Shipping re-quoted automatically because ${opts.reason}.`);
+            }
+            return true;
         } catch (_error) {
-            setError('Failed to fetch shipping rates. Try again.');
+            if (!opts.auto) {
+                setError('Failed to fetch shipping rates. Try again.');
+            }
+            return false;
         } finally {
-            setLoadingQuote(false);
+            if (requestId === quoteRequestIdRef.current) {
+                setLoadingQuote(false);
+            }
         }
     };
+
+    const handleCalculateShipping = async () => {
+        await requestShippingQuote({ auto: false });
+    };
+
+    const handleSaveCustomAsCatalog = async (item: typeof customCart[number]) => {
+        const title = item.title.trim();
+        if (!title) {
+            window.alert('Please enter a title before saving this custom job to catalog.');
+            return;
+        }
+
+        const gsm = item.gsm || pricingSettings.defaultGsm;
+        const commonConfig = {
+            pageCount: item.pageCount,
+            pageSize: item.pageSize,
+            gsm,
+            paperType: item.paperType,
+            bindingType: item.bindingType,
+        };
+
+        const bwPricing = calculateCustomPricing(
+            {
+                ...commonConfig,
+                printMode: 'bw',
+            },
+            pricingSettings,
+        );
+        const colorPricing = calculateCustomPricing(
+            {
+                ...commonConfig,
+                printMode: 'color',
+            },
+            pricingSettings,
+        );
+
+        setSavingCustomCatalogId(item.id);
+        try {
+            await BookService.addBook({
+                title,
+                pageCount: item.pageCount,
+                priceBW: bwPricing.unitPrice,
+                priceColor: colorPricing.unitPrice,
+                weightGrams: Math.max(bwPricing.unitWeightGrams, colorPricing.unitWeightGrams),
+            });
+            await refreshBooks();
+            window.alert(`Saved "${title}" to catalog.`);
+        } catch (saveError) {
+            console.error('Failed to save custom item as catalog:', saveError);
+            window.alert('Failed to save to catalog. Please check Firebase permissions and retry.');
+        } finally {
+            setSavingCustomCatalogId(null);
+        }
+    };
+
+    useEffect(() => {
+        if (!shippingQuote || !lastQuotedBasis) return;
+        if (loadingQuote) return;
+        if (!pincode || pincode.length !== 6) return;
+        if (totals.weight <= 0) return;
+        if (currentQuoteBasis.fingerprint === lastQuotedBasis.fingerprint) return;
+
+        const reason = getQuoteChangeReason(lastQuotedBasis, currentQuoteBasis);
+        const timer = window.setTimeout(() => {
+            void requestShippingQuote({ auto: true, reason });
+        }, 500);
+
+        return () => window.clearTimeout(timer);
+    }, [
+        shippingQuote,
+        lastQuotedBasis,
+        loadingQuote,
+        pincode,
+        totals.weight,
+        currentQuoteBasis,
+    ]);
+
+    useEffect(() => {
+        if (!shippingQuote) return;
+        if (pincode.length === 6 && totals.weight > 0) return;
+
+        setShippingQuote(null);
+        setSelectedCourier(null);
+        setLastQuotedBasis(null);
+        setAutoQuoteNotice('');
+    }, [shippingQuote, pincode, totals.weight]);
 
     const activeCourier = selectedCourier || shippingQuote?.cheapest;
 
@@ -283,6 +457,10 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
             grandTotal: computeGrandTotal().toString(),
             courier: activeCourier?.courierName || 'TBD',
             shipping: activeCourier ? `${activeCourier.price}` : 'Pending',
+            trackingCourier: activeCourier?.courierName || '',
+            trackingId: '',
+            trackingLink: '',
+            orderId: '',
         });
 
         return encodeURIComponent(`${withTemplate}\n\n${summary}`);
@@ -637,6 +815,13 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                 <span>{item.quantity}</span>
                                 <button onClick={() => updateCustomQuantity(item.id, 1)}>+</button>
                             </div>
+                            <button
+                                className="save-catalog-btn"
+                                onClick={() => handleSaveCustomAsCatalog(item)}
+                                disabled={savingCustomCatalogId === item.id}
+                            >
+                                {savingCustomCatalogId === item.id ? 'Saving...' : 'Save as Catalog'}
+                            </button>
                             <button className="delete-btn" onClick={() => removeCustomFromCart(item.id)}>
                                 🗑
                             </button>
@@ -708,6 +893,7 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                         </button>
                     </div>
                     {error && <p className="error-text">{error}</p>}
+                    {autoQuoteNotice && !error && <p className="info-text">{autoQuoteNotice}</p>}
 
                     {activeCourier && (
                         <div className="shipping-quote-result">

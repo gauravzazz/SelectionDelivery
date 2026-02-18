@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Book, BookService } from '../api/bookApi';
 
 export type BookVariant = 'color' | 'bw';
@@ -29,7 +29,10 @@ interface BookContextType {
     customCart: CustomCartItem[];
     loading: boolean;
     isAdmin: boolean;
+    hasMoreBooks: boolean;
+    loadingMoreBooks: boolean;
     refreshBooks: () => Promise<void>;
+    loadMoreBooks: () => Promise<void>;
     addToCart: (bookId: string, variant: BookVariant) => void;
     removeFromCart: (bookId: string, variant: BookVariant) => void;
     updateQuantity: (bookId: string, variant: BookVariant, delta: number) => void;
@@ -50,13 +53,30 @@ interface BookContextType {
 
 const BookContext = createContext<BookContextType | undefined>(undefined);
 
+const BOOK_PAGE_SIZE = 250;
+const CART_BOOK_CACHE_KEY = 'cartBookCache';
+
+type BookMap = Record<string, Book>;
+
+function mergeBooksToMap(prev: BookMap, books: Book[]): BookMap {
+    const next: BookMap = { ...prev };
+    for (const book of books) {
+        next[book.id] = book;
+    }
+    return next;
+}
+
 export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [books, setBooks] = useState<Book[]>([]);
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [hasMoreBooks, setHasMoreBooks] = useState(true);
+    const [loadingMoreBooks, setLoadingMoreBooks] = useState(false);
+
     const [cart, setCart] = useState<CartItem[]>(() => {
         try {
             const saved = localStorage.getItem('cart');
             return saved ? JSON.parse(saved) : [];
-        } catch (e) {
+        } catch (_error) {
             return [];
         }
     });
@@ -64,8 +84,16 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const saved = localStorage.getItem('customCart');
             return saved ? JSON.parse(saved) : [];
-        } catch (e) {
+        } catch (_error) {
             return [];
+        }
+    });
+    const [bookLookup, setBookLookup] = useState<BookMap>(() => {
+        try {
+            const saved = localStorage.getItem(CART_BOOK_CACHE_KEY);
+            return saved ? (JSON.parse(saved) as BookMap) : {};
+        } catch (_error) {
+            return {};
         }
     });
     const [loading, setLoading] = useState(true);
@@ -74,56 +102,106 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         try {
             localStorage.setItem('cart', JSON.stringify(cart));
-        } catch (e) {
-            console.error('Failed to save cart', e);
+        } catch (error) {
+            console.error('Failed to save cart', error);
         }
     }, [cart]);
 
     useEffect(() => {
         try {
             localStorage.setItem('customCart', JSON.stringify(customCart));
-        } catch (e) {
-            console.error('Failed to save custom cart', e);
+        } catch (error) {
+            console.error('Failed to save custom cart', error);
         }
     }, [customCart]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(CART_BOOK_CACHE_KEY, JSON.stringify(bookLookup));
+        } catch (error) {
+            console.error('Failed to save cart book cache', error);
+        }
+    }, [bookLookup]);
 
     const refreshBooks = async () => {
         try {
             setLoading(true);
-            const data = await BookService.getAllBooks();
-            setBooks(data);
+            const page = await BookService.getBooksPage(BOOK_PAGE_SIZE);
+            setBooks(page.books);
+            setCursor(page.nextCursor);
+            setHasMoreBooks(page.hasMore);
+            setBookLookup((prev) => mergeBooksToMap(prev, page.books));
         } catch (error) {
-            console.error("Failed to fetch books:", error);
+            console.error('Failed to fetch books:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    // Load items from local storage if available? 
-    // For now, just load books on mount
+    const loadMoreBooks = async () => {
+        if (loadingMoreBooks || loading || !hasMoreBooks) return;
+        try {
+            setLoadingMoreBooks(true);
+            const page = await BookService.getBooksPage(BOOK_PAGE_SIZE, cursor);
+            setBooks((prev) => {
+                const seen = new Set(prev.map((book) => book.id));
+                const uniqueAppend = page.books.filter((book) => !seen.has(book.id));
+                return [...prev, ...uniqueAppend];
+            });
+            setCursor(page.nextCursor);
+            setHasMoreBooks(page.hasMore);
+            setBookLookup((prev) => mergeBooksToMap(prev, page.books));
+        } catch (error) {
+            console.error('Failed to load more books:', error);
+        } finally {
+            setLoadingMoreBooks(false);
+        }
+    };
+
     useEffect(() => {
         refreshBooks();
     }, []);
 
-    // Cleanup cart: Remove items that reference deleted books
     useEffect(() => {
-        if (books.length > 0) {
-            setCart((prev) => {
-                const validItems = prev.filter(item => books.some(b => b.id === item.bookId));
-                // Only update if changes found to avoid loop
-                return validItems.length !== prev.length ? validItems : prev;
-            });
-        }
-    }, [books]);
+        const missingIds = Array.from(
+            new Set(
+                cart
+                    .map((item) => item.bookId)
+                    .filter((bookId) => Boolean(bookId) && !bookLookup[bookId]),
+            ),
+        );
+
+        if (missingIds.length === 0) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const fetched = await BookService.getBooksByIds(missingIds);
+                if (cancelled || fetched.length === 0) return;
+                setBookLookup((prev) => mergeBooksToMap(prev, fetched));
+            } catch (error) {
+                console.error('Failed to hydrate missing cart books:', error);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [cart, bookLookup]);
 
     const addToCart = (bookId: string, variant: BookVariant) => {
+        const selected = books.find((book) => book.id === bookId);
+        if (selected) {
+            setBookLookup((prev) => ({ ...prev, [selected.id]: selected }));
+        }
+
         setCart((prev) => {
             const existing = prev.find((item) => item.bookId === bookId && item.variant === variant);
             if (existing) {
                 return prev.map((item) =>
                     item.bookId === bookId && item.variant === variant
                         ? { ...item, quantity: item.quantity + 1 }
-                        : item
+                        : item,
                 );
             }
             return [...prev, { bookId, variant, quantity: 1 }];
@@ -135,15 +213,17 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateQuantity = (bookId: string, variant: BookVariant, delta: number) => {
-        setCart((prev) => {
-            return prev.map((item) => {
-                if (item.bookId === bookId && item.variant === variant) {
-                    const newQty = Math.max(0, item.quantity + delta);
-                    return { ...item, quantity: newQty };
-                }
-                return item;
-            }).filter((item) => item.quantity > 0);
-        });
+        setCart((prev) =>
+            prev
+                .map((item) => {
+                    if (item.bookId === bookId && item.variant === variant) {
+                        const nextQty = Math.max(0, item.quantity + delta);
+                        return { ...item, quantity: nextQty };
+                    }
+                    return item;
+                })
+                .filter((item) => item.quantity > 0),
+        );
     };
 
     const addCustomToCart = (item: Omit<CustomCartItem, 'id'>): string => {
@@ -179,16 +259,18 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCustomCart([]);
     };
 
-    const toggleAdmin = () => setIsAdmin(!isAdmin);
+    const toggleAdmin = () => setIsAdmin((prev) => !prev);
 
-    const getCartDetails = useMemo(() => {
-        return () => {
-            return cart.map((item) => {
-                const book = books.find((b) => b.id === item.bookId);
-                return book ? { book, variant: item.variant, quantity: item.quantity } : null;
-            }).filter((item): item is { book: Book; variant: BookVariant; quantity: number } => item !== null);
-        };
-    }, [cart, books]);
+    const getCartDetails = useMemo(
+        () => () =>
+            cart
+                .map((item) => {
+                    const book = bookLookup[item.bookId];
+                    return book ? { book, variant: item.variant, quantity: item.quantity } : null;
+                })
+                .filter((item): item is { book: Book; variant: BookVariant; quantity: number } => item !== null),
+        [cart, bookLookup],
+    );
 
     const totals = useMemo(() => {
         let price = 0;
@@ -196,18 +278,14 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let weight = 0;
 
         cart.forEach((item) => {
-            const book = books.find((b) => b.id === item.bookId);
-            if (book) {
-                const unitPrice = item.variant === 'color' ? book.priceColor : book.priceBW;
-                price += unitPrice * item.quantity;
-                pages += book.pageCount * item.quantity;
+            const book = bookLookup[item.bookId];
+            if (!book) return;
 
-                // Estimate weight: 
-                // Color often implies slightly heavier paper/ink load, but generally same base weight
-                // Using book.weightGrams or fallback (pages/2 * 5g for A4 75gsm)
-                const itemWeight = book.weightGrams || (Math.ceil(book.pageCount / 2) * 5);
-                weight += itemWeight * item.quantity;
-            }
+            const unitPrice = item.variant === 'color' ? book.priceColor : book.priceBW;
+            price += unitPrice * item.quantity;
+            pages += book.pageCount * item.quantity;
+            const itemWeight = book.weightGrams || Math.ceil(book.pageCount / 2) * 5;
+            weight += itemWeight * item.quantity;
         });
 
         customCart.forEach((item) => {
@@ -217,11 +295,11 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         return { price, pages, weight };
-    }, [cart, books, customCart]);
+    }, [cart, customCart, bookLookup]);
 
     const cartItemCount = useMemo(() => {
-        const catalogCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-        const customCount = customCart.reduce((acc, item) => acc + item.quantity, 0);
+        const catalogCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const customCount = customCart.reduce((sum, item) => sum + item.quantity, 0);
         return catalogCount + customCount;
     }, [cart, customCart]);
 
@@ -233,7 +311,10 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 customCart,
                 loading,
                 isAdmin,
+                hasMoreBooks,
+                loadingMoreBooks,
                 refreshBooks,
+                loadMoreBooks,
                 addToCart,
                 removeFromCart,
                 updateQuantity,
@@ -256,7 +337,8 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useBookContext = () => {
     const context = useContext(BookContext);
     if (!context) {
-        throw new Error("useBookContext must be used within a BookProvider");
+        throw new Error('useBookContext must be used within a BookProvider');
     }
     return context;
 };
+

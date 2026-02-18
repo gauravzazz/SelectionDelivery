@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageTemplate, MessageService } from '../api/messageApi';
+import { MessageTemplate, MessageService, MESSAGE_TEMPLATE_SAMPLES } from '../api/messageApi';
 import './MessageManager.css';
 
 interface MessageManagerProps {
@@ -14,7 +14,7 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ title: '', text: '' });
     const [isAdding, setIsAdding] = useState(false);
-    const templateVariables = ['{name}', '{orderId}', '{grandTotal}', '{trackingCourier}', '{trackingId}', '{trackingLink}'];
+    const templateVariables = ['{name}', '{orderId}', '{grandTotal}', '{courier}', '{shipping}', '{trackingCourier}', '{trackingId}', '{trackingLink}'];
 
     useEffect(() => {
         if (!isModal || isOpen) {
@@ -87,6 +87,12 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
         setEditForm((prev) => ({ ...prev, text: `${prev.text}${prev.text ? ' ' : ''}${token}` }));
     };
 
+    const startFromSample = (sample: Omit<MessageTemplate, 'id'>) => {
+        setEditingId(null);
+        setIsAdding(true);
+        setEditForm({ title: sample.title, text: sample.text });
+    };
+
     if (isModal && !isOpen) return null;
 
     const content = (
@@ -99,6 +105,21 @@ const MessageManager: React.FC<MessageManagerProps> = ({ isOpen, onClose }) => {
             <div className="manager-body">
                 <div className="template-list">
                     <button className="btn-add-template" onClick={startAdd}>+ New Template</button>
+                    <div className="sample-strip">
+                        <div className="sample-strip-title">Quick Samples</div>
+                        <div className="sample-chip-row">
+                            {MESSAGE_TEMPLATE_SAMPLES.map((sample) => (
+                                <button
+                                    key={sample.title}
+                                    type="button"
+                                    className="sample-template-chip"
+                                    onClick={() => startFromSample(sample)}
+                                >
+                                    {sample.title}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     {loading ? <div className="loading">Loading...</div> : (
                         templates.map(t => (

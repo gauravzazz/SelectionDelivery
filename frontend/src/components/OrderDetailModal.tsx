@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Order, OrderService } from '../api/orderApi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Order, OrderService, OrderSource, OrderStage } from '../api/orderApi';
 import { MessageTemplate, MessageService } from '../api/messageApi';
+import { getStageLabel, pickSuggestedTemplate, sortTemplatesByStage } from '../engine/templateSuggestions';
+import { addHoursIso, getOrderFollowUpHours, readFollowUpHours } from '../engine/followupScheduler';
 import './OrderDetailModal.css';
+
+function getSourceLabel(source?: OrderSource): string {
+    if (source === 'pdf2printout') return 'pdf2printout';
+    if (source === 'onlineprintout.com') return 'onlineprintout.com';
+    return 'Not set';
+}
 
 interface OrderDetailModalProps {
     isOpen: boolean;
@@ -13,6 +21,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
     const [templates, setTemplates] = useState<MessageTemplate[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
     const [messageText, setMessageText] = useState('');
+    const [templatePinnedByUser, setTemplatePinnedByUser] = useState(false);
     const [savingDraft, setSavingDraft] = useState(false);
     const [draftDetails, setDraftDetails] = useState({
         name: '',
@@ -43,27 +52,86 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
             courierName: order.courierName || '',
             shippingCharge: order.shippingCharge || 0,
         });
+        setTemplatePinnedByUser(false);
+        setSelectedTemplate(null);
+        setMessageText('');
     }, [order]);
+
+    const messagingStage = useMemo<OrderStage>(() => {
+        if (!order) return 'quote_shared';
+        if (order.status === 'confirmed' && order.trackingId) return 'shipped';
+        if (order.stage) return order.stage;
+        return order.paymentStatus === 'paid' ? 'paid' : 'awaiting_payment';
+    }, [order]);
+
+    const orderedTemplates = useMemo(
+        () => sortTemplatesByStage(templates, messagingStage),
+        [templates, messagingStage],
+    );
+    const suggestedTemplate = useMemo(
+        () => pickSuggestedTemplate(templates, messagingStage),
+        [templates, messagingStage],
+    );
 
     const loadTemplates = async () => {
         const data = await MessageService.getAll();
         setTemplates(data);
     };
 
-    const handleTemplateSelect = (t: MessageTemplate) => {
+    const handleTemplateSelect = (t: MessageTemplate, pinSelection: boolean = true) => {
+        if (pinSelection) setTemplatePinnedByUser(true);
         setSelectedTemplate(t);
-        // Replace variables if needed
         let text = t.text;
         if (order) {
-            text = text.replace('{orderId}', order.id)
-                .replace('{name}', order.address.name)
-                .replace('{grandTotal}', String(order.grandTotal))
-                .replace('{trackingCourier}', order.trackingCourier || order.courierName || '')
-                .replace('{trackingId}', order.trackingId || '')
-                .replace('{trackingLink}', order.trackingLink || '');
+            const tokenMap: Record<string, string> = {
+                orderId: order.id,
+                name: order.address.name || '',
+                grandTotal: String(order.grandTotal || 0),
+                courier: order.courierName || '',
+                shipping: String(order.shippingCharge || 0),
+                trackingCourier: order.trackingCourier || order.courierName || '',
+                trackingId: order.trackingId || '',
+                trackingLink: order.trackingLink || '',
+            };
+
+            Object.entries(tokenMap).forEach(([key, value]) => {
+                text = text.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+            });
         }
         setMessageText(text);
     };
+
+    const scheduleFollowUpAfterOutboundMessage = async () => {
+        if (!order || order.status !== 'draft') return;
+        try {
+            const hours = getOrderFollowUpHours(order, readFollowUpHours());
+            const nowIso = new Date().toISOString();
+            await OrderService.updateOrder(order.id, {
+                followUpAfterHours: hours,
+                lastOutboundMessageAt: nowIso,
+                nextFollowUpAt: addHoursIso(nowIso, hours),
+                followUpStatus: 'scheduled',
+                followUpCount: (order.followUpCount || 0) + 1,
+            });
+        } catch (error) {
+            console.error('Failed to schedule follow-up after outbound message', error);
+        }
+    };
+
+    useEffect(() => {
+        if (!isOpen || !order) return;
+        if (templatePinnedByUser) return;
+        if (!suggestedTemplate) return;
+        if (selectedTemplate?.id === suggestedTemplate.id && messageText.trim()) return;
+        handleTemplateSelect(suggestedTemplate, false);
+    }, [
+        isOpen,
+        order,
+        suggestedTemplate,
+        templatePinnedByUser,
+        selectedTemplate?.id,
+        messageText,
+    ]);
 
     const handleSendMessage = () => {
         if (!messageText) return;
@@ -73,11 +141,13 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
         } else {
             window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
         }
+        void scheduleFollowUpAfterOutboundMessage();
     };
 
     const handleSendTelegram = () => {
         if (!messageText) return;
         window.open(`https://t.me/share/url?url=.&text=${encodeURIComponent(messageText)}`, '_blank');
+        void scheduleFollowUpAfterOutboundMessage();
     };
 
     const getMissingDraftFields = () => {
@@ -179,6 +249,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
                                 <span>Payment</span>
                                 <span className={`status-badge ${order.paymentStatus}`}>{order.paymentStatus}</span>
                             </div>
+                            <div className="payment-row">
+                                <span>Source</span>
+                                <span>{getSourceLabel(order.orderSource)}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -268,15 +342,32 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ isOpen, onClose, or
                             <div className="section-header-row">
                                 <h4>💬 Send Message</h4>
                             </div>
+                            <div className="template-suggestion-line">
+                                <span>
+                                    Suggested for {getStageLabel(messagingStage)}: {suggestedTemplate?.title || 'No specific suggestion'}
+                                </span>
+                                {templatePinnedByUser && suggestedTemplate && selectedTemplate?.id !== suggestedTemplate.id && (
+                                    <button
+                                        type="button"
+                                        className="btn-link-action"
+                                        onClick={() => {
+                                            setTemplatePinnedByUser(false);
+                                            handleTemplateSelect(suggestedTemplate, false);
+                                        }}
+                                    >
+                                        Use Suggested
+                                    </button>
+                                )}
+                            </div>
 
                             <div className="template-chips">
-                                {templates.map(t => (
+                                {orderedTemplates.map(t => (
                                     <button
                                         key={t.id}
-                                        className={`chip ${selectedTemplate?.id === t.id ? 'active' : ''}`}
+                                        className={`chip ${selectedTemplate?.id === t.id ? 'active' : ''} ${suggestedTemplate?.id === t.id ? 'recommended' : ''}`}
                                         onClick={() => handleTemplateSelect(t)}
                                     >
-                                        {t.title}
+                                        {suggestedTemplate?.id === t.id ? `⭐ ${t.title}` : t.title}
                                     </button>
                                 ))}
                             </div>

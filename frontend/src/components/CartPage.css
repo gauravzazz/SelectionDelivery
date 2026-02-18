@@ -275,6 +275,29 @@
     opacity: 1;
 }
 
+.save-catalog-btn {
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font-family);
+    min-width: 118px;
+}
+
+.save-catalog-btn:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: rgba(120, 60, 255, 0.14);
+}
+
+.save-catalog-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 /* ── Checkout Summary (Static Bottom) ── */
 .checkout-summary {
     margin-top: var(--sp-xl);
@@ -350,6 +373,12 @@
 .error-text {
     color: hsl(0, 72%, 55%);
     font-size: 0.8rem;
+    margin: 0;
+}
+
+.info-text {
+    color: var(--color-success);
+    font-size: 0.78rem;
     margin: 0;
 }
 
@@ -731,6 +760,18 @@
         grid-template-columns: 1fr;
     }
 
+    .custom-item-card {
+        flex-direction: column;
+        gap: var(--sp-sm);
+    }
+
+    .custom-item-card .cart-actions {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
     .custom-preview-row {
         flex-direction: column;
         align-items: flex-start;
@@ -748,5 +789,11 @@
 
     .custom-item-edit-grid {
         grid-template-columns: 1fr;
+    }
+
+    .save-catalog-btn {
+        min-width: 0;
+        flex: 1;
+        text-align: center;
     }
 }

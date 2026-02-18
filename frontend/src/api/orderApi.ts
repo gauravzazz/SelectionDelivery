@@ -19,6 +19,8 @@ export interface OrderAddress {
     fullAddress: string;
 }
 
+export type OrderSource = 'pdf2printout' | 'onlineprintout.com';
+
 export type OrderStage =
     | 'quote_shared'
     | 'awaiting_address'
@@ -63,6 +65,13 @@ export interface Order {
     stage: OrderStage;
     paymentStatus: 'pending' | 'paid';
     paymentMode?: 'upi' | 'cash' | 'bank' | 'other';
+    orderSource?: OrderSource;
+    followUpAfterHours?: number;
+    followUpStatus?: 'scheduled' | 'due' | 'snoozed' | 'paused' | 'done';
+    lastOutboundMessageAt?: string;
+    lastCustomerReplyAt?: string;
+    nextFollowUpAt?: string;
+    followUpCount?: number;
     trackingId?: string;
     trackingCourier?: string;
     trackingLink?: string;
@@ -122,6 +131,16 @@ export const OrderService = {
                 stage: raw.stage || (raw.status === 'confirmed' ? 'shipped' : 'quote_shared'),
                 paymentStatus: raw.paymentStatus || 'pending',
                 paymentMode: raw.paymentMode,
+                orderSource:
+                    raw.orderSource === 'pdf2printout' || raw.orderSource === 'onlineprintout.com'
+                        ? raw.orderSource
+                        : undefined,
+                followUpAfterHours: raw.followUpAfterHours,
+                followUpStatus: raw.followUpStatus || (raw.status === 'draft' ? 'scheduled' : 'done'),
+                lastOutboundMessageAt: raw.lastOutboundMessageAt,
+                lastCustomerReplyAt: raw.lastCustomerReplyAt,
+                nextFollowUpAt: raw.nextFollowUpAt,
+                followUpCount: raw.followUpCount || 0,
                 trackingId: raw.trackingId,
                 trackingCourier: raw.trackingCourier,
                 trackingLink: raw.trackingLink,
@@ -142,6 +161,8 @@ export const OrderService = {
         await updateDoc(doc(db, COLLECTION_NAME, id), {
             status: 'confirmed',
             stage: 'shipped',
+            followUpStatus: 'done',
+            nextFollowUpAt: '',
             ...tracking,
             updatedAt: new Date().toISOString(),
         });

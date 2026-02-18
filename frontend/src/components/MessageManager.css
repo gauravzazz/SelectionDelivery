@@ -45,6 +45,46 @@
     color: var(--color-primary);
 }
 
+.sample-strip {
+    padding: var(--sp-sm);
+    border-bottom: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.sample-strip-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+
+.sample-chip-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.sample-template-chip {
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-full);
+    font-size: 0.73rem;
+    padding: 6px 10px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: var(--font-family);
+}
+
+.sample-template-chip:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.09);
+}
+
 .template-item {
     padding: var(--sp-md);
     border-bottom: 1px solid var(--color-border);
