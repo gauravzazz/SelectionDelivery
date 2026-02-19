@@ -7,6 +7,7 @@ import CartPage from './components/CartPage';
 import OrderFlow from './components/OrderFlow';
 import OrdersPage from './components/OrdersPage';
 import MessageManager from './components/MessageManager';
+import ReviewCampaignPage from './components/ReviewCampaignPage';
 import SettingsPage from './components/SettingsPage';
 import { useBookContext } from './context/BookContext';
 import {
@@ -38,7 +39,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages' | 'settings'>('catalog');
+    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages' | 'reviews' | 'settings'>('catalog');
     const { cartItemCount } = useBookContext();
 
     // Order flow data passed from CartPage
@@ -92,6 +93,12 @@ function App() {
 
     // Try to load options from backend (enhances defaults with courier list)
     useEffect(() => {
+        // Hidden access for reviews page via ?reviews=1
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('reviews') === '1') {
+            setMode('reviews');
+        }
+
         fetchDropdownOptions()
             .then(setOptions)
             .catch(() => { }); // Silently fall back to hardcoded defaults
@@ -285,6 +292,8 @@ function App() {
                     <div className="messages-standalone-container">
                         <MessageManager />
                     </div>
+                ) : mode === 'reviews' ? (
+                    <ReviewCampaignPage />
                 ) : mode === 'settings' ? (
                     <SettingsPage />
                 ) : (

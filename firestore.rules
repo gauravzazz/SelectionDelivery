@@ -25,6 +25,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Review campaign leads
+    match /review_leads/{leadId} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Default deny for all other collections
     match /{document=**} {
