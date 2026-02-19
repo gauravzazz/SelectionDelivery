@@ -37,4 +37,12 @@ export class BluedartAdapter implements CourierAdapter {
             estimatedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
         };
     }
+
+    async cancelShipment(trackingId: string): Promise<{ success: boolean; message?: string }> {
+        return { success: false, message: 'Bluedart cancellation not implemented' };
+    }
+
+    async getLabel(trackingId: string): Promise<{ labelUrl: string }> {
+        return { labelUrl: `https://www.bluedart.com/label/${trackingId}.pdf` };
+    }
 }

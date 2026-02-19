@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Order, OrderService, OrderSource } from '../api/orderApi';
-import { fetchShippingQuote, QuoteResponse, createShipment } from '../api/shippingApi';
+import { fetchShippingQuote, QuoteResponse, createShipment, cancelShipment, getShipmentLabel } from '../api/shippingApi';
 import CourierModal from './CourierModal';
 import OrderDetailModal from './OrderDetailModal';
 import {
@@ -164,6 +164,7 @@ const OrdersPage: React.FC = () => {
     const [sourcePrompt, setSourcePrompt] = useState<{ order: Order; action: 'ship' | 'manual_confirm' } | null>(null);
     const [sourceSelection, setSourceSelection] = useState<OrderSource>('pdf2printout');
     const [savingSource, setSavingSource] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null); // tracking orderId for cancel/label actions
 
     const loadOrders = async () => {
         setLoading(true);
@@ -411,6 +412,40 @@ const OrdersPage: React.FC = () => {
         e.stopPropagation();
         const msg = encodeURIComponent(text);
         window.open(`https://t.me/share/url?url=.&text=${msg}`, '_blank');
+    };
+
+    const handleCancelShipment = async (e: React.MouseEvent, orderId: string) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to cancel this shipment? The order will be moved back to "Ready to Ship".')) return;
+
+        setActionLoading(orderId);
+        try {
+            await cancelShipment(orderId);
+            alert('Shipment cancelled successfully.');
+            loadOrders();
+        } catch (err: any) {
+            alert(`Failed to cancel: ${err.message}`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDownloadLabel = async (e: React.MouseEvent, order: Order) => {
+        e.stopPropagation();
+        if (order.labelUrl) {
+            window.open(order.labelUrl, '_blank');
+            return;
+        }
+
+        setActionLoading(order.id);
+        try {
+            const { labelUrl } = await getShipmentLabel(order.id);
+            window.open(labelUrl, '_blank');
+        } catch (err: any) {
+            alert(`Failed to get label: ${err.message}`);
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     const formatRelativeDue = (iso?: string): string => {
@@ -906,6 +941,20 @@ const OrdersPage: React.FC = () => {
                                 </button>
                                 <button className="share-btn telegram" onClick={(e) => shareTelegram(e, generateTrackingMessage(order))}>
                                     Telegram
+                                </button>
+                                <button
+                                    className="btn-label"
+                                    onClick={(e) => handleDownloadLabel(e, order)}
+                                    disabled={actionLoading === order.id}
+                                >
+                                    {actionLoading === order.id ? '...' : (order.labelUrl ? 'Label ⬇️' : 'Get Label')}
+                                </button>
+                                <button
+                                    className="btn-cancel-ship"
+                                    onClick={(e) => handleCancelShipment(e, order.id)}
+                                    disabled={actionLoading === order.id}
+                                >
+                                    {actionLoading === order.id ? '...' : 'Cancel ❌'}
                                 </button>
                                 <button className="btn-delete" onClick={(e) => handleDelete(e, order.id)}>🗑</button>
                             </div>

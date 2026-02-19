@@ -109,13 +109,88 @@ export class ShipwayAdapter implements CourierAdapter {
         }
     }
     async createShipment(payload: ShipmentPayload): Promise<ShipmentResponse> {
-        // Mock shipment creation
-        const mockTrackingId = `SHIPWAY${Math.floor(100000 + Math.random() * 900000)}`;
-        return {
-            trackingId: mockTrackingId,
-            courierName: this.name,
-            labelUrl: `https://shipway.in/label/${mockTrackingId}.pdf`,
-            estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        const email = process.env.SHIPWAY_EMAIL || '';
+        const licenseKey = process.env.SHIPWAY_LICENSE_KEY || '';
+        const authString = Buffer.from(`${email}:${licenseKey}`).toString('base64');
+        const AUTH_HEADER = `Basic ${authString}`;
+
+        const shipwayPayload = {
+            order_id: payload.orderId,
+            carrier_id: payload.courierId, // Optional, Shipway can auto-select if not provided
+            cust_name: payload.deliveryAddress.name,
+            cust_mobile: payload.deliveryAddress.phone,
+            cust_pincode: payload.deliveryAddress.pincode,
+            cust_address: payload.deliveryAddress.address,
+            weight: payload.weightGrams / 1000,
+            payment_type: payload.paymentMethod === 'cod' ? 'cod' : 'prepaid',
+            collectable_amount: payload.amount,
+            label_generate: "1" // Request label generation
         };
+
+        try {
+            const response = await fetch('https://app.shipway.com/api/v2/generateLabel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': AUTH_HEADER
+                },
+                body: JSON.stringify(shipwayPayload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Shipway API error: ${response.status} - ${errText}`);
+            }
+
+            const data: any = await response.json();
+
+            if (data.status === 'success' || data.success === 'success') {
+                return {
+                    trackingId: data.tracking_no || data.awb_number,
+                    courierName: data.carrier_name || this.name,
+                    labelUrl: data.label_url,
+                    estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+                };
+            } else {
+                throw new Error(data.message || 'Shipway creation failed');
+            }
+        } catch (error: any) {
+            console.error('[ShipwayAdapter] Shipment creation error:', error);
+            throw error;
+        }
+    }
+
+    async cancelShipment(trackingId: string, orderId?: string): Promise<{ success: boolean; message?: string }> {
+        const email = process.env.SHIPWAY_EMAIL || '';
+        const licenseKey = process.env.SHIPWAY_LICENSE_KEY || '';
+        const authString = Buffer.from(`${email}:${licenseKey}`).toString('base64');
+        const AUTH_HEADER = `Basic ${authString}`;
+
+        try {
+            const response = await fetch('https://app.shipway.com/api/v2/cancelOrder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': AUTH_HEADER
+                },
+                body: JSON.stringify({ tracking_no: trackingId, order_id: orderId })
+            });
+
+            const data: any = await response.json();
+            if (data.status === 'success' || data.success === 'success') {
+                return { success: true };
+            } else {
+                return { success: false, message: data.message || 'Shipway cancellation failed' };
+            }
+        } catch (error: any) {
+            console.error('[ShipwayAdapter] Cancellation error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getLabel(trackingId: string, orderId?: string): Promise<{ labelUrl: string }> {
+        // Shipway often provides label URL in the creation response.
+        // If needed to fetch again, we can use their label API.
+        return { labelUrl: `https://app.shipway.com/api/v2/getLabel?tracking_no=${trackingId}` };
     }
 }

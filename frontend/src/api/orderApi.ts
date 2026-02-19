@@ -78,6 +78,7 @@ export interface Order {
     selectedCourierId?: string;
     paidAt?: string;
     notes?: string;
+    labelUrl?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -147,6 +148,7 @@ export const OrderService = {
                 selectedCourierId: raw.selectedCourierId,
                 paidAt: raw.paidAt,
                 notes: raw.notes,
+                labelUrl: raw.labelUrl,
                 createdAt: raw.createdAt || new Date().toISOString(),
                 updatedAt: raw.updatedAt || new Date().toISOString(),
             };

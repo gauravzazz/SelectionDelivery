@@ -164,13 +164,112 @@ export class EkartAdapter implements CourierAdapter {
         }
     }
     async createShipment(payload: ShipmentPayload): Promise<ShipmentResponse> {
-        // Mock shipment creation for Ekart
-        const mockTrackingId = `EKART${Math.floor(100000 + Math.random() * 900000)}`;
+        const token = await this.getToken();
+        if (!token) throw new Error('Failed to authenticate with Ekart');
+
+        const ekartPayload = {
+            client_id: process.env.EKART_CLIENT_ID,
+            shipments: [{
+                client_reference_id: payload.orderId,
+                service_type: this.serviceType,
+                shipment_type: "FORWARD",
+                cod_amount: payload.paymentMethod === 'cod' ? payload.amount : 0,
+                collectable_amount: payload.paymentMethod === 'cod' ? payload.amount : 0,
+                declared_value: payload.amount,
+                consignee_details: {
+                    name: payload.deliveryAddress.name,
+                    address_line1: payload.deliveryAddress.address.substring(0, 100),
+                    pincode: payload.deliveryAddress.pincode,
+                    contact_number: payload.deliveryAddress.phone,
+                    primary_contact_number: payload.deliveryAddress.phone
+                },
+                vendor_details: {
+                    vendor_name: payload.pickupAddress.name,
+                    pincode: payload.pickupAddress.pincode,
+                    contact_number: payload.pickupAddress.phone,
+                    vendor_code: process.env.EKART_VENDOR_CODE || "DEFAULT"
+                },
+                package_details: {
+                    dim_unit: "cm",
+                    weight_unit: "g",
+                    length: 10,
+                    width: 10,
+                    height: 10,
+                    weight: payload.weightGrams
+                },
+                item_details: payload.items.map(item => ({
+                    item_description: item.title,
+                    item_quantity: item.quantity,
+                    item_value: item.price
+                }))
+            }]
+        };
+
+        try {
+            const response = await fetch('https://app.elite.ekartlogistics.in/integrations/v2/shipments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(ekartPayload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[EkartAdapter] Create shipment failed:', JSON.stringify(errorData));
+                throw new Error(`Ekart API error: ${response.status}`);
+            }
+
+            const data: any = await response.json();
+            // Ekart usually returns a list of shipment responses
+            const shipmentResult = data.shipment_responses?.[0];
+
+            if (shipmentResult && shipmentResult.status === 'SUCCESS') {
+                return {
+                    trackingId: shipmentResult.tracking_id,
+                    courierName: this.name,
+                    estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+                };
+            } else {
+                const errMsg = shipmentResult?.error_message || 'Unknown Ekart error';
+                throw new Error(`Ekart failed: ${errMsg}`);
+            }
+        } catch (error: any) {
+            console.error('[EkartAdapter] Shipment creation error:', error);
+            throw error;
+        }
+    }
+
+    async cancelShipment(trackingId: string, orderId?: string): Promise<{ success: boolean; message?: string }> {
+        const token = await this.getToken();
+        if (!token) throw new Error('Failed to authenticate with Ekart');
+
+        try {
+            const response = await fetch(`https://app.elite.ekartlogistics.in/integrations/v2/shipments/${trackingId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                return { success: true };
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                return { success: false, message: (errorData as any).message || `HTTP ${response.status}` };
+            }
+        } catch (error: any) {
+            console.error('[EkartAdapter] Cancellation error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getLabel(trackingId: string, orderId?: string): Promise<{ labelUrl: string }> {
+        // Return the standardized label fetching URL from their documentation
+        // Often it's a direct endpoint or we serve it via backend proxy
         return {
-            trackingId: mockTrackingId,
-            courierName: this.name,
-            labelUrl: `https://ekartlogistics.com/label/${mockTrackingId}.pdf`,
-            estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+            labelUrl: `https://app.elite.ekartlogistics.in/integrations/v2/shipments/${trackingId}/label`
         };
     }
 }

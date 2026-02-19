@@ -163,3 +163,27 @@ export const createShipment = async (orderId: string, courierId: string): Promis
     }
     return await response.json();
 };
+
+export const cancelShipment = async (orderId: string): Promise<{ success: boolean }> => {
+    const response = await fetchApi('/shipment/cancel', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Cancellation failed' }));
+        throw new Error(err.error || 'Failed to cancel shipment');
+    }
+    return await response.json();
+};
+
+export const getShipmentLabel = async (orderId: string): Promise<{ labelUrl: string }> => {
+    const response = await fetchApi(`/shipment/label/${orderId}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch shipping label');
+    }
+    return await response.json();
+};

@@ -122,4 +122,85 @@ router.post('/create', async (req, res): Promise<void> => {
     }
 });
 
+router.post('/cancel', async (req, res): Promise<void> => {
+    try {
+        const { orderId } = req.body;
+        if (!orderId) {
+            res.status(400).json({ error: 'Missing orderId' });
+            return;
+        }
+
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderSnap = await orderRef.get();
+        if (!orderSnap.exists) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+
+        const order = orderSnap.data() as any;
+        const trackingId = order.trackingId;
+        const courierId = order.selectedCourierId || order.trackingCourier;
+
+        if (!trackingId || !courierId) {
+            res.status(400).json({ error: 'Order has no tracking information to cancel' });
+            return;
+        }
+
+        const adapter = adapters[normalizeCourierId(courierId)];
+        if (!adapter) {
+            res.status(400).json({ error: 'Unsupported courier for cancellation' });
+            return;
+        }
+
+        const result = await adapter.cancelShipment(trackingId, orderId);
+        if (result.success) {
+            await orderRef.update({
+                stage: 'ready_to_ship', // Rollback stage
+                trackingId: null,
+                labelUrl: null,
+                updatedAt: new Date().toISOString()
+            });
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: result.message || 'Cancellation failed' });
+        }
+    } catch (error: any) {
+        console.error('Shipment cancellation failed:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+
+router.get('/label/:orderId', async (req, res): Promise<void> => {
+    try {
+        const { orderId } = req.params;
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderSnap = await orderRef.get();
+        if (!orderSnap.exists) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+
+        const order = orderSnap.data() as any;
+        const trackingId = order.trackingId;
+        const courierId = order.selectedCourierId || order.trackingCourier;
+
+        if (!trackingId || !courierId) {
+            res.status(400).json({ error: 'Order has no tracking info' });
+            return;
+        }
+
+        const adapter = adapters[normalizeCourierId(courierId)];
+        if (!adapter) {
+            res.status(400).json({ error: 'Unsupported courier' });
+            return;
+        }
+
+        const result = await adapter.getLabel(trackingId, orderId);
+        res.json(result);
+    } catch (error: any) {
+        console.error('Failed to get label:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+
 export default router;
