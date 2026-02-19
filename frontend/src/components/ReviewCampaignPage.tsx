@@ -102,8 +102,14 @@ const ReviewCampaignPage: React.FC = () => {
     };
 
     const handleSend = (lead: CampaignLead) => {
-        const firstName = lead.name.split(' ')[0];
-        const message = `Hi ${firstName},
+        // Logic to keep "Dr." or "Dr" with the name
+        const parts = lead.name.trim().split(/\s+/);
+        let greetingName = parts[0];
+        if (parts.length > 1 && /^dr\.?$/i.test(parts[0])) {
+            greetingName = `${parts[0]} ${parts[1]}`;
+        }
+
+        const message = `Hi ${greetingName},
 You ordered from pdf2printout, and customers like you helped shape us early on. As we expand, we’re selectively inviting a few past customers to share their experience—because your feedback directly influences how new customers decide to trust us.
 
 If you can spare 30 seconds, your review here would genuinely support our growth:
