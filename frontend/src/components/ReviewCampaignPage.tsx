@@ -104,9 +104,9 @@ const ReviewCampaignPage: React.FC = () => {
     const handleSend = (lead: CampaignLead) => {
         const firstName = lead.name.split(' ')[0];
         const message = `Hi ${firstName},
-You’ve been one of the customers who helped shape pdf2printout early on. As we expand, we’re selectively inviting a few past customers to share their experience—it genuinely influences how new customers decide to trust us.
+You ordered from pdf2printout, and customers like you helped shape us early on. As we expand, we’re selectively inviting a few past customers to share their experience—because your feedback directly influences how new customers decide to trust us.
 
-If you can spare 30 seconds, your review here would mean a lot and directly support our growth:
+If you can spare 30 seconds, your review here would genuinely support our growth:
 https://g.page/r/CaF7zdF0ebjSEBM/review
 
 Thank you for being part of our journey.`;
