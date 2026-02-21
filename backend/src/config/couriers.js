@@ -1,15 +1,11 @@
+"use strict";
 /**
  * Courier Enable/Disable Configuration
  * Toggle couriers on/off here — disabled couriers are never called.
  */
-
-export interface CourierConfig {
-    id: string;
-    name: string;
-    enabled: boolean;
-}
-
-export const COURIER_CONFIG: CourierConfig[] = [
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getEnabledCouriers = exports.COURIER_CONFIG = void 0;
+exports.COURIER_CONFIG = [
     { id: 'delhivery', name: 'Delhivery', enabled: true },
     { id: 'bluedart', name: 'Bluedart', enabled: true },
     { id: 'dtdc', name: 'DTDC', enabled: true },
@@ -19,6 +15,7 @@ export const COURIER_CONFIG: CourierConfig[] = [
     { id: 'shipway', name: 'Shipway', enabled: true },
     { id: 'shipmozo', name: 'Shipmozo', enabled: true },
 ];
-
-export const getEnabledCouriers = (): CourierConfig[] =>
-    COURIER_CONFIG.filter((c) => c.enabled);
+var getEnabledCouriers = function () {
+    return exports.COURIER_CONFIG.filter(function (c) { return c.enabled; });
+};
+exports.getEnabledCouriers = getEnabledCouriers;

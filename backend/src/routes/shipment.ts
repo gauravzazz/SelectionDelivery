@@ -27,6 +27,7 @@ const adapters: Record<string, any> = {
     ekart_surface: new EkartAdapter('SURFACE'),
     ekart_express: new EkartAdapter('EXPRESS'),
     shipyaari: new ShipyaariAdapter(),
+    shipmozo: new (require('../courier/adapters/shipmozo').ShipmozoAdapter)(),
 };
 
 router.post('/create', async (req, res): Promise<void> => {
@@ -199,6 +200,43 @@ router.get('/label/:orderId', async (req, res): Promise<void> => {
         res.json(result);
     } catch (error: any) {
         console.error('Failed to get label:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+
+router.get('/track/:orderId', async (req, res): Promise<void> => {
+    try {
+        const { orderId } = req.params;
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderSnap = await orderRef.get();
+        if (!orderSnap.exists) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+
+        const order = orderSnap.data() as any;
+        const trackingId = order.trackingId;
+        const courierId = order.selectedCourierId || order.trackingCourier;
+
+        if (!trackingId || !courierId) {
+            res.status(400).json({ error: 'Order has no tracking info' });
+            return;
+        }
+
+        const adapter = adapters[normalizeCourierId(courierId)];
+        if (!adapter) {
+            res.status(400).json({ error: 'Unsupported courier' });
+            return;
+        }
+
+        if (adapter.trackShipment) {
+            const result = await adapter.trackShipment(trackingId);
+            res.json(result);
+        } else {
+            res.status(400).json({ error: 'Tracking not available for this courier' });
+        }
+    } catch (error: any) {
+        console.error('Failed to get tracking:', error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 });

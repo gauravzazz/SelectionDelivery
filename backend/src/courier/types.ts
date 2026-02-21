@@ -27,6 +27,7 @@ export interface CourierAdapter {
     createShipment(payload: ShipmentPayload): Promise<ShipmentResponse>;
     cancelShipment(trackingId: string, orderId?: string): Promise<{ success: boolean; message?: string }>;
     getLabel(trackingId: string, orderId?: string): Promise<{ labelUrl: string }>;
+    trackShipment?(trackingId: string): Promise<any>;
 }
 
 export interface ShipmentPayload {
