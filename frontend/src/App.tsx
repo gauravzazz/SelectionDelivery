@@ -177,6 +177,13 @@ function App() {
 
     const handleCreateOrder = (data: typeof orderFlowData) => {
         setOrderFlowData(data);
+        // Reset order flow state when starting a new order from cart
+        setOrderRawText('');
+        setOrderAddress({ name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '' });
+        setOrderNotes('');
+        localStorage.removeItem('orderRawText');
+        localStorage.removeItem('orderAddress');
+        localStorage.removeItem('orderNotes');
         setMode('order-flow');
     };
 

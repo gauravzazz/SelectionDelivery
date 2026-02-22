@@ -65,6 +65,7 @@ export class ShipyaariAdapter implements CourierAdapter {
                     return {
                         courierId: this.id,
                         courierName: `Shipyaari (${best.name})`,
+                        source: this.name,
                         price: Math.round(best.price),
                         deliveryDays: best.days,
                         available: true,
@@ -75,6 +76,7 @@ export class ShipyaariAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,
@@ -86,6 +88,7 @@ export class ShipyaariAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,

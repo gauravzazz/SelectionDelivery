@@ -10,14 +10,15 @@ export interface CourierConfig {
 }
 
 export const COURIER_CONFIG: CourierConfig[] = [
-    { id: 'delhivery', name: 'Delhivery', enabled: true },
-    { id: 'bluedart', name: 'Bluedart', enabled: true },
-    { id: 'dtdc', name: 'DTDC', enabled: true },
+    { id: 'delhivery', name: 'Delhivery', enabled: false },
+    { id: 'bluedart', name: 'Bluedart', enabled: false },
+    { id: 'dtdc', name: 'DTDC', enabled: false },
     { id: 'shipyaari', name: 'Shipyaari', enabled: true },
     { id: 'ekart_surface', name: 'Ekart Surface', enabled: true },
     { id: 'ekart_express', name: 'Ekart Express', enabled: true },
     { id: 'shipway', name: 'Shipway', enabled: true },
     { id: 'shipmozo', name: 'Shipmozo', enabled: true },
+    { id: 'shift', name: 'Shift', enabled: true },
 ];
 
 export const getEnabledCouriers = (): CourierConfig[] =>

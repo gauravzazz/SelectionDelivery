@@ -23,6 +23,7 @@ export class DelhiveryAdapter implements CourierAdapter {
         return {
             courierId: this.id,
             courierName: this.name,
+            source: this.name,
             price,
             deliveryDays,
             available: true,

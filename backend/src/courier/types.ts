@@ -11,6 +11,7 @@ export interface CourierPayload {
 export interface CourierQuote {
     courierId: string;
     courierName: string;
+    source: string;        // e.g., 'Shipmozo', 'EkartDirect', 'Shift'
     price: number;         // INR
     deliveryDays: number;
     available: boolean;

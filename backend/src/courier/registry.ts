@@ -11,6 +11,7 @@ import { ShipyaariAdapter } from './adapters/shipyaari';
 import { EkartAdapter } from './adapters/ekart';
 import { ShipwayAdapter } from './adapters/shipway';
 import { ShipmozoAdapter } from './adapters/shipmozo';
+import { ShiftAdapter } from './adapters/shift';
 
 /** Master list — add new courier adapters here */
 const ALL_ADAPTERS: CourierAdapter[] = [
@@ -22,6 +23,7 @@ const ALL_ADAPTERS: CourierAdapter[] = [
     new EkartAdapter('EXPRESS'),
     new ShipwayAdapter(),
     new ShipmozoAdapter(),
+    new ShiftAdapter(),
 ];
 
 /**

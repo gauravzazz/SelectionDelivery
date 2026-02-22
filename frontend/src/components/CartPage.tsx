@@ -476,19 +476,9 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
 
     const isCartEmpty = catalogCartItems.length === 0 && customCart.length === 0;
 
-    if (isCartEmpty) {
-        return (
-            <div className="cart-page-empty">
-                <div className="empty-icon">🛒</div>
-                <h2>Your cart is empty</h2>
-                <p>Add predefined books or custom print jobs to continue.</p>
-            </div>
-        );
-    }
-
     return (
         <div className="cart-page-container">
-            <h2 className="cart-page-title">Your Order</h2>
+            <h2 className="cart-page-title">{isCartEmpty ? 'Your Cart is Empty' : 'Your Order'}</h2>
 
             <div className={`custom-job-builder glass-panel ${customBuilderOpen ? '' : 'collapsed'}`}>
                 <button
@@ -646,37 +636,11 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                 {customCart.map((item) => {
                     const itemGsm = item.gsm || pricingSettings.defaultGsm;
                     return (
-                    <div key={item.id} className="cart-item-card glass-panel custom-item-card">
-                        <div className="cart-item-info">
-                            <input
-                                className="custom-item-title-input"
-                                value={item.title}
-                                onChange={(e) =>
-                                    handleCustomFieldUpdate(
-                                        item.id,
-                                        {
-                                            pageCount: item.pageCount,
-                                            printMode: item.printMode,
-                                            pageSize: item.pageSize,
-                                            gsm: itemGsm,
-                                            paperType: item.paperType,
-                                            bindingType: item.bindingType,
-                                        },
-                                        { title: e.target.value },
-                                    )
-                                }
-                            />
-                            <div className="cart-badges">
-                                <span className={`badge ${item.printMode}`}>{item.printMode.toUpperCase()}</span>
-                                <span className="badge pages">{item.pageSize} {itemGsm} GSM</span>
-                                <span className="badge pages">{item.pageCount} Pages</span>
-                                <span className="badge pages">Custom</span>
-                            </div>
-                            <div className="custom-item-edit-grid">
+                        <div key={item.id} className="cart-item-card glass-panel custom-item-card">
+                            <div className="cart-item-info">
                                 <input
-                                    type="number"
-                                    min={1}
-                                    value={item.pageCount}
+                                    className="custom-item-title-input"
+                                    value={item.title}
                                     onChange={(e) =>
                                         handleCustomFieldUpdate(
                                             item.id,
@@ -688,311 +652,339 @@ const CartPage: React.FC<CartPageProps> = ({ onCreateOrder }) => {
                                                 paperType: item.paperType,
                                                 bindingType: item.bindingType,
                                             },
-                                            { pageCount: Math.max(1, Number(e.target.value) || 1) },
+                                            { title: e.target.value },
                                         )
                                     }
                                 />
-                                <select
-                                    value={item.printMode}
-                                    onChange={(e) =>
-                                        handleCustomFieldUpdate(
-                                            item.id,
-                                            {
-                                                pageCount: item.pageCount,
-                                                printMode: item.printMode,
-                                                pageSize: item.pageSize,
-                                                gsm: itemGsm,
-                                                paperType: item.paperType,
-                                                bindingType: item.bindingType,
-                                            },
-                                            { printMode: e.target.value as 'color' | 'bw' },
-                                        )
-                                    }
-                                >
-                                    <option value="bw">B&W</option>
-                                    <option value="color">Color</option>
-                                </select>
-                                <select
-                                    value={item.pageSize}
-                                    onChange={(e) =>
-                                        handleCustomFieldUpdate(
-                                            item.id,
-                                            {
-                                                pageCount: item.pageCount,
-                                                printMode: item.printMode,
-                                                pageSize: item.pageSize,
-                                                gsm: itemGsm,
-                                                paperType: item.paperType,
-                                                bindingType: item.bindingType,
-                                            },
-                                            { pageSize: e.target.value },
-                                        )
-                                    }
-                                >
-                                    {availableSizes.map((size) => (
-                                        <option key={size} value={size}>
-                                            {size}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={itemGsm}
-                                    onChange={(e) =>
-                                        handleCustomFieldUpdate(
-                                            item.id,
-                                            {
-                                                pageCount: item.pageCount,
-                                                printMode: item.printMode,
-                                                pageSize: item.pageSize,
-                                                gsm: itemGsm,
-                                                paperType: item.paperType,
-                                                bindingType: item.bindingType,
-                                            },
-                                            { gsm: e.target.value },
-                                        )
-                                    }
-                                >
-                                    {pricingSettings.gsmOptions.map((gsm) => (
-                                        <option key={gsm} value={gsm}>
-                                            {gsm} GSM
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={item.paperType}
-                                    onChange={(e) =>
-                                        handleCustomFieldUpdate(
-                                            item.id,
-                                            {
-                                                pageCount: item.pageCount,
-                                                printMode: item.printMode,
-                                                pageSize: item.pageSize,
-                                                gsm: itemGsm,
-                                                paperType: item.paperType,
-                                                bindingType: item.bindingType,
-                                            },
-                                            { paperType: e.target.value },
-                                        )
-                                    }
-                                >
-                                    {Object.keys(pricingSettings.paperMultipliers).map((paperType) => (
-                                        <option key={paperType} value={paperType}>
-                                            {paperType}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={item.bindingType}
-                                    onChange={(e) =>
-                                        handleCustomFieldUpdate(
-                                            item.id,
-                                            {
-                                                pageCount: item.pageCount,
-                                                printMode: item.printMode,
-                                                pageSize: item.pageSize,
-                                                gsm: itemGsm,
-                                                paperType: item.paperType,
-                                                bindingType: item.bindingType,
-                                            },
-                                            { bindingType: e.target.value },
-                                        )
-                                    }
-                                >
-                                    {Object.keys(pricingSettings.bindingCharges).map((binding) => (
-                                        <option key={binding} value={binding}>
-                                            {binding}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="cart-badges">
+                                    <span className={`badge ${item.printMode}`}>{item.printMode.toUpperCase()}</span>
+                                    <span className="badge pages">{item.pageSize} {itemGsm} GSM</span>
+                                    <span className="badge pages">{item.pageCount} Pages</span>
+                                    <span className="badge pages">Custom</span>
+                                </div>
+                                <div className="custom-item-edit-grid">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={item.pageCount}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { pageCount: Math.max(1, Number(e.target.value) || 1) },
+                                            )
+                                        }
+                                    />
+                                    <select
+                                        value={item.printMode}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { printMode: e.target.value as 'color' | 'bw' },
+                                            )
+                                        }
+                                    >
+                                        <option value="bw">B&W</option>
+                                        <option value="color">Color</option>
+                                    </select>
+                                    <select
+                                        value={item.pageSize}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { pageSize: e.target.value },
+                                            )
+                                        }
+                                    >
+                                        {availableSizes.map((size) => (
+                                            <option key={size} value={size}>
+                                                {size}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={itemGsm}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { gsm: e.target.value },
+                                            )
+                                        }
+                                    >
+                                        {pricingSettings.gsmOptions.map((gsm) => (
+                                            <option key={gsm} value={gsm}>
+                                                {gsm} GSM
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={item.paperType}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { paperType: e.target.value },
+                                            )
+                                        }
+                                    >
+                                        {Object.keys(pricingSettings.paperMultipliers).map((paperType) => (
+                                            <option key={paperType} value={paperType}>
+                                                {paperType}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={item.bindingType}
+                                        onChange={(e) =>
+                                            handleCustomFieldUpdate(
+                                                item.id,
+                                                {
+                                                    pageCount: item.pageCount,
+                                                    printMode: item.printMode,
+                                                    pageSize: item.pageSize,
+                                                    gsm: itemGsm,
+                                                    paperType: item.paperType,
+                                                    bindingType: item.bindingType,
+                                                },
+                                                { bindingType: e.target.value },
+                                            )
+                                        }
+                                    >
+                                        {Object.keys(pricingSettings.bindingCharges).map((binding) => (
+                                            <option key={binding} value={binding}>
+                                                {binding}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="cart-price">
+                                    ₹{item.unitPrice} x {item.quantity} = ₹{item.unitPrice * item.quantity}
+                                </div>
                             </div>
-                            <div className="cart-price">
-                                ₹{item.unitPrice} x {item.quantity} = ₹{item.unitPrice * item.quantity}
+                            <div className="cart-actions">
+                                <div className="qty-controls">
+                                    <button onClick={() => updateCustomQuantity(item.id, -1)}>-</button>
+                                    <span>{item.quantity}</span>
+                                    <button onClick={() => updateCustomQuantity(item.id, 1)}>+</button>
+                                </div>
+                                <button
+                                    className="save-catalog-btn"
+                                    onClick={() => handleSaveCustomAsCatalog(item)}
+                                    disabled={savingCustomCatalogId === item.id}
+                                >
+                                    {savingCustomCatalogId === item.id ? 'Saving...' : 'Save as Catalog'}
+                                </button>
+                                <button className="delete-btn" onClick={() => removeCustomFromCart(item.id)}>
+                                    🗑
+                                </button>
                             </div>
                         </div>
-                        <div className="cart-actions">
-                            <div className="qty-controls">
-                                <button onClick={() => updateCustomQuantity(item.id, -1)}>-</button>
-                                <span>{item.quantity}</span>
-                                <button onClick={() => updateCustomQuantity(item.id, 1)}>+</button>
-                            </div>
-                            <button
-                                className="save-catalog-btn"
-                                onClick={() => handleSaveCustomAsCatalog(item)}
-                                disabled={savingCustomCatalogId === item.id}
-                            >
-                                {savingCustomCatalogId === item.id ? 'Saving...' : 'Save as Catalog'}
-                            </button>
-                            <button className="delete-btn" onClick={() => removeCustomFromCart(item.id)}>
-                                🗑
-                            </button>
-                        </div>
-                    </div>
                     );
                 })}
             </div>
 
-            <div className="checkout-summary glass-panel">
-                <div className="summary-row">
-                    <span>Books Total</span>
-                    <span>₹{totals.price}</span>
-                </div>
-                <div className="summary-row">
-                    <span>Total Weight</span>
-                    <span>{(totals.weight / 1000).toFixed(2)} kg</span>
-                </div>
-
-                <div className="adjustment-section">
-                    <h4>Discount / Markup</h4>
-                    <div className="adjustment-controls">
-                        <div className="adjustment-toggle">
-                            <button
-                                className={`adj-btn ${adjustmentType === 'discount' ? 'active discount-active' : ''}`}
-                                onClick={() => setAdjustmentType('discount')}
-                            >
-                                Discount
-                            </button>
-                            <button
-                                className={`adj-btn ${adjustmentType === 'markup' ? 'active markup-active' : ''}`}
-                                onClick={() => setAdjustmentType('markup')}
-                            >
-                                Markup
-                            </button>
-                        </div>
-                        <div className="adjustment-input">
-                            <span className="rupee-prefix">₹</span>
-                            <input
-                                type="number"
-                                min={0}
-                                placeholder="0"
-                                value={adjustment || ''}
-                                onChange={(e) => setAdjustment(Math.max(0, Number(e.target.value)))}
-                            />
-                        </div>
+            {!isCartEmpty && (
+                <div className="checkout-summary glass-panel">
+                    <div className="summary-row">
+                        <span>Books Total</span>
+                        <span>₹{totals.price}</span>
                     </div>
-                    {adjustment > 0 && (
-                        <div className={`adjustment-preview ${adjustmentType}`}>
-                            {adjustmentType === 'discount'
-                                ? `₹${adjustment} discount applied`
-                                : `₹${adjustment} added to delivery charge`}
-                        </div>
-                    )}
-                </div>
+                    <div className="summary-row">
+                        <span>Total Weight</span>
+                        <span>{(totals.weight / 1000).toFixed(2)} kg</span>
+                    </div>
 
-                <div className="shipping-section">
-                    <h4>Estimate Shipping</h4>
-                    <div className="pincode-input">
-                        <input
-                            type="text"
-                            placeholder="Pincode"
-                            maxLength={6}
-                            value={pincode}
-                            onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                        />
-                        <button onClick={handleCalculateShipping} disabled={loadingQuote}>
-                            {loadingQuote ? '...' : 'Check'}
+                    <div className="adjustment-section">
+                        <h4>Discount / Markup</h4>
+                        <div className="adjustment-controls">
+                            <div className="adjustment-toggle">
+                                <button
+                                    className={`adj-btn ${adjustmentType === 'discount' ? 'active discount-active' : ''}`}
+                                    onClick={() => setAdjustmentType('discount')}
+                                >
+                                    Discount
+                                </button>
+                                <button
+                                    className={`adj-btn ${adjustmentType === 'markup' ? 'active markup-active' : ''}`}
+                                    onClick={() => setAdjustmentType('markup')}
+                                >
+                                    Markup
+                                </button>
+                            </div>
+                            <div className="adjustment-input">
+                                <span className="rupee-prefix">₹</span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    placeholder="0"
+                                    value={adjustment || ''}
+                                    onChange={(e) => setAdjustment(Math.max(0, Number(e.target.value)))}
+                                />
+                            </div>
+                        </div>
+                        {adjustment > 0 && (
+                            <div className={`adjustment-preview ${adjustmentType}`}>
+                                {adjustmentType === 'discount'
+                                    ? `₹${adjustment} discount applied`
+                                    : `₹${adjustment} added to delivery charge`}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="shipping-section">
+                        <h4>Estimate Shipping</h4>
+                        <div className="pincode-input">
+                            <input
+                                type="text"
+                                placeholder="Pincode"
+                                maxLength={6}
+                                value={pincode}
+                                onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                            />
+                            <button onClick={handleCalculateShipping} disabled={loadingQuote}>
+                                {loadingQuote ? '...' : 'Check'}
+                            </button>
+                        </div>
+                        {error && <p className="error-text">{error}</p>}
+                        {autoQuoteNotice && !error && <p className="info-text">{autoQuoteNotice}</p>}
+
+                        {activeCourier && (
+                            <div className="shipping-quote-result">
+                                <div className="summary-row shipping">
+                                    <span className="shipping-label">
+                                        Shipping ({activeCourier.courierName})
+                                        {shippingQuote && shippingQuote.allOptions.length > 1 && (
+                                            <button className="change-courier-btn" onClick={() => setShowCourierModal(true)}>
+                                                Change
+                                            </button>
+                                        )}
+                                    </span>
+                                    <span>+₹{effectiveShippingDisplay()}</span>
+                                </div>
+                                {adjustmentType === 'discount' && adjustment > 0 && (
+                                    <div className="summary-row discount-row">
+                                        <span>Discount</span>
+                                        <span>-₹{adjustment}</span>
+                                    </div>
+                                )}
+                                <div className="divider"></div>
+                                <div className="summary-row grand-total">
+                                    <span>Grand Total</span>
+                                    <span>₹{computeGrandTotal()}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="message-template-row">
+                        <label>Message Template</label>
+                        <select
+                            value={selectedTemplateId}
+                            onChange={(e) => setSelectedTemplateId(e.target.value)}
+                        >
+                            <option value="">Use auto quote message</option>
+                            {templates.map((template) => (
+                                <option key={template.id} value={template.id}>
+                                    {template.title}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="share-buttons">
+                        <button className="share-btn whatsapp" onClick={shareWhatsApp}>
+                            Share on WhatsApp
+                        </button>
+                        <button className="share-btn telegram" onClick={shareTelegram}>
+                            Share on Telegram
                         </button>
                     </div>
-                    {error && <p className="error-text">{error}</p>}
-                    {autoQuoteNotice && !error && <p className="info-text">{autoQuoteNotice}</p>}
 
-                    {activeCourier && (
-                        <div className="shipping-quote-result">
-                            <div className="summary-row shipping">
-                                <span className="shipping-label">
-                                    Shipping ({activeCourier.courierName})
-                                    {shippingQuote && shippingQuote.allOptions.length > 1 && (
-                                        <button className="change-courier-btn" onClick={() => setShowCourierModal(true)}>
-                                            Change
-                                        </button>
-                                    )}
-                                </span>
-                                <span>+₹{effectiveShippingDisplay()}</span>
-                            </div>
-                            {adjustmentType === 'discount' && adjustment > 0 && (
-                                <div className="summary-row discount-row">
-                                    <span>Discount</span>
-                                    <span>-₹{adjustment}</span>
-                                </div>
-                            )}
-                            <div className="divider"></div>
-                            <div className="summary-row grand-total">
-                                <span>Grand Total</span>
-                                <span>₹{computeGrandTotal()}</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                    <button
+                        className="create-order-btn"
+                        onClick={() => {
+                            const catalogItems: OrderItem[] = catalogCartItems.map(({ book, variant, quantity }) => ({
+                                itemType: 'catalog',
+                                bookId: book.id,
+                                title: book.title,
+                                variant,
+                                quantity,
+                                unitPrice: variant === 'color' ? book.priceColor : book.priceBW,
+                                pageCount: book.pageCount,
+                            }));
 
-                <div className="message-template-row">
-                    <label>Message Template</label>
-                    <select
-                        value={selectedTemplateId}
-                        onChange={(e) => setSelectedTemplateId(e.target.value)}
+                            const customItems: OrderItem[] = customCart.map((item) => ({
+                                itemType: 'custom',
+                                bookId: item.id,
+                                title: item.title,
+                                variant: item.printMode,
+                                quantity: item.quantity,
+                                unitPrice: item.unitPrice,
+                                pageCount: item.pageCount,
+                                customConfig: {
+                                    printMode: item.printMode,
+                                    pageSize: item.pageSize,
+                                    gsm: item.gsm || pricingSettings.defaultGsm,
+                                    paperType: item.paperType,
+                                    bindingType: item.bindingType,
+                                },
+                            }));
+
+                            onCreateOrder({
+                                items: [...catalogItems, ...customItems],
+                                booksTotal: totals.price,
+                                shippingCharge: activeCourier?.price || 0,
+                                courierName: activeCourier?.courierName || 'TBD',
+                                selectedCourierId: activeCourier?.courierId,
+                                adjustment,
+                                adjustmentType,
+                                grandTotal: computeGrandTotal(),
+                                weightGrams: totals.weight,
+                            });
+                        }}
                     >
-                        <option value="">Use auto quote message</option>
-                        {templates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                                {template.title}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="share-buttons">
-                    <button className="share-btn whatsapp" onClick={shareWhatsApp}>
-                        Share on WhatsApp
-                    </button>
-                    <button className="share-btn telegram" onClick={shareTelegram}>
-                        Share on Telegram
+                        Next → Create / Resume Draft
                     </button>
                 </div>
-
-                <button
-                    className="create-order-btn"
-                    onClick={() => {
-                        const catalogItems: OrderItem[] = catalogCartItems.map(({ book, variant, quantity }) => ({
-                            itemType: 'catalog',
-                            bookId: book.id,
-                            title: book.title,
-                            variant,
-                            quantity,
-                            unitPrice: variant === 'color' ? book.priceColor : book.priceBW,
-                            pageCount: book.pageCount,
-                        }));
-
-                        const customItems: OrderItem[] = customCart.map((item) => ({
-                            itemType: 'custom',
-                            bookId: item.id,
-                            title: item.title,
-                            variant: item.printMode,
-                            quantity: item.quantity,
-                            unitPrice: item.unitPrice,
-                            pageCount: item.pageCount,
-                            customConfig: {
-                                printMode: item.printMode,
-                                pageSize: item.pageSize,
-                                gsm: item.gsm || pricingSettings.defaultGsm,
-                                paperType: item.paperType,
-                                bindingType: item.bindingType,
-                            },
-                        }));
-
-                        onCreateOrder({
-                            items: [...catalogItems, ...customItems],
-                            booksTotal: totals.price,
-                            shippingCharge: activeCourier?.price || 0,
-                            courierName: activeCourier?.courierName || 'TBD',
-                            selectedCourierId: activeCourier?.courierId,
-                            adjustment,
-                            adjustmentType,
-                            grandTotal: computeGrandTotal(),
-                            weightGrams: totals.weight,
-                        });
-                    }}
-                >
-                    Next → Create / Resume Draft
-                </button>
-            </div>
+            )}
 
             <CourierModal
                 isOpen={showCourierModal}

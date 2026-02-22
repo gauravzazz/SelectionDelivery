@@ -12,6 +12,7 @@ export interface QuoteRequest {
 export interface ShippingOption {
     courierId: string;
     courierName: string;
+    source: string;
     price: number;
     deliveryDays: number;
     available: boolean;

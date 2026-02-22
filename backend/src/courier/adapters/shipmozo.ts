@@ -3,8 +3,8 @@ import { getEnabledCouriers } from '../../config/couriers';
 import { CourierAdapter, CourierPayload, CourierQuote, ShipmentPayload, ShipmentResponse } from '../types';
 
 const SHIPMOZO_BASE_URL = 'https://shipping-api.com/app/api/v1';
-const PUBLIC_KEY = 'mjLZxH7eQSnTohF2rO8k';
-const PRIVATE_KEY = 'ZXOUnx3JMC56FhEBNYG8';
+const PUBLIC_KEY = process.env.SHIPMOZO_PUBLIC_KEY || 'nB0ifpkMREO6GAhUeos9';
+const PRIVATE_KEY = process.env.SHIPMOZO_PRIVATE_KEY || 'fhLJX1UY4pOPD6F0Zxqw';
 
 export class ShipmozoAdapter implements CourierAdapter {
     id = 'shipmozo';
@@ -29,29 +29,63 @@ export class ShipmozoAdapter implements CourierAdapter {
                 {
                     pickup_pincode: payload.originPincode,
                     delivery_pincode: payload.destinationPincode,
-                    weight: payload.weightGrams.toString(),
+                    weight: payload.weightGrams,
+                    order_amount: 100,
+                    type_of_package: "SPS",
                     payment_type: "PREPAID",
-                    shipment_type: "FORWARD"
+                    shipment_type: "FORWARD",
+                    rov_type: "ROV_OWNER",
+                    cod_amount: "0",
+                    dimensions: [
+                        {
+                            no_of_box: 1,
+                            length: 10,
+                            width: 10,
+                            height: 10
+                        }
+                    ]
                 },
                 { headers: this.getHeaders() }
             );
 
-            // Note: Actual Shipmozo structure might differ slightly, this is assumed based on standard practices
-            // Given the limited response schema in Swagger ("Successful operation"), this parses standard result
-            const price = response.data?.data?.rate || response.data?.rate || 0; // fallback if needed
+            // Shipmozo returns a list of couriers with their rates
+            if (Array.isArray(response.data?.data) && response.data.data.length > 0) {
+                const options = response.data.data
+                    .map((opt: any) => ({
+                        price: parseFloat(opt.total_charges || 0),
+                        days: parseInt(opt.estimated_delivery?.split(' ')[0]) || 4,
+                        name: opt.name || 'Shipmozo Partner'
+                    }))
+                    .filter((opt: any) => opt.price > 0)
+                    .sort((a: any, b: any) => a.price - b.price);
+
+                if (options.length > 0) {
+                    const best = options[0];
+                    return {
+                        courierId: this.id,
+                        courierName: `Shipmozo (${best.name})`,
+                        source: this.name,
+                        price: Math.round(best.price),
+                        deliveryDays: best.days,
+                        available: true,
+                    };
+                }
+            }
 
             return {
                 courierId: this.id,
                 courierName: this.name,
-                price: parseFloat(price) || 0,
-                deliveryDays: 3, // fallback days
-                available: true,
+                source: this.name,
+                price: 0,
+                deliveryDays: 0,
+                available: false,
             };
         } catch (error) {
             console.error('Shipmozo getQuote error:', error);
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,

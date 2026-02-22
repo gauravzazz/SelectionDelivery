@@ -74,6 +74,7 @@ export class EkartAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,
@@ -116,6 +117,7 @@ export class EkartAdapter implements CourierAdapter {
                     return {
                         courierId: this.id,
                         courierName: this.name,
+                        source: this.name,
                         price: 0,
                         deliveryDays: 0,
                         available: false,
@@ -126,6 +128,7 @@ export class EkartAdapter implements CourierAdapter {
                 return {
                     courierId: this.id,
                     courierName: this.name,
+                    source: this.name,
                     price: 0,
                     deliveryDays: 0,
                     available: false,
@@ -138,6 +141,7 @@ export class EkartAdapter implements CourierAdapter {
                 return {
                     courierId: this.id,
                     courierName: this.name,
+                    source: this.name,
                     price: Math.round(parseFloat(rawData.total)),
                     deliveryDays: this.serviceType === 'EXPRESS' ? 2 : 4,
                     available: true,
@@ -147,6 +151,7 @@ export class EkartAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,
@@ -157,6 +162,7 @@ export class EkartAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,

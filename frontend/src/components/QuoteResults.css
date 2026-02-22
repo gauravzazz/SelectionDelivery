@@ -91,7 +91,15 @@
     font-size: 1.5rem;
     font-weight: 800;
     color: var(--color-text-primary);
-    margin-bottom: var(--sp-xxs);
+    margin-bottom: 2px;
+}
+
+.hero-source {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: var(--sp-xs);
+    opacity: 0.8;
 }
 
 .hero-price {
@@ -175,7 +183,7 @@
     color: var(--color-text-primary);
 }
 
-.option-store {
+.option-info {
     font-size: 0.75rem;
     color: var(--color-text-muted);
 }

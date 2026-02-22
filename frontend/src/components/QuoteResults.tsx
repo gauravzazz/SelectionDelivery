@@ -45,6 +45,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({
                     <div className="hero-card cheapest">
                         <div className="hero-badge">💰 Cheapest</div>
                         <div className="hero-courier">{cheapest.courierName}</div>
+                        <div className="hero-source">via {cheapest.source}</div>
                         <div className="hero-price">₹{cheapest.price}</div>
                         <div className="hero-meta">
                             <span>📍 {cheapest.storeName}</span>
@@ -57,6 +58,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({
                     <div className="hero-card fastest">
                         <div className="hero-badge">⚡ Fastest</div>
                         <div className="hero-courier">{fastest.courierName}</div>
+                        <div className="hero-source">via {fastest.source}</div>
                         <div className="hero-price">₹{fastest.price}</div>
                         <div className="hero-meta">
                             <span>📍 {fastest.storeName}</span>
@@ -69,6 +71,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({
                     <div className="hero-card best-overall">
                         <div className="hero-badge">🏆 Best Overall</div>
                         <div className="hero-courier">{cheapest!.courierName}</div>
+                        <div className="hero-source">via {cheapest!.source}</div>
                         <div className="hero-price">₹{cheapest!.price}</div>
                         <div className="hero-meta">
                             <span>📍 {cheapest!.storeName}</span>
@@ -95,7 +98,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({
                         <div key={`${opt.courierId}-${opt.storePincode}`} className="option-row" style={{ animationDelay: `${i * 0.05}s` }}>
                             <div className="option-left">
                                 <span className="option-courier">{opt.courierName}</span>
-                                <span className="option-store">from {opt.storePincode}</span>
+                                <span className="option-info">via {opt.source} • from {opt.storePincode}</span>
                             </div>
                             <div className="option-right">
                                 <span className="option-price">₹{opt.price}</span>

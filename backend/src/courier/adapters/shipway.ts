@@ -22,6 +22,7 @@ export class ShipwayAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,
@@ -59,6 +60,7 @@ export class ShipwayAdapter implements CourierAdapter {
                 return {
                     courierId: this.id,
                     courierName: this.name,
+                    source: this.name,
                     price: 0,
                     deliveryDays: 0,
                     available: false,
@@ -82,6 +84,7 @@ export class ShipwayAdapter implements CourierAdapter {
                     return {
                         courierId: this.id,
                         courierName: `Shipway (${best.name})`,
+                        source: this.name,
                         price: Math.round(best.price),
                         deliveryDays: best.days,
                         available: true,
@@ -92,6 +95,7 @@ export class ShipwayAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,
@@ -102,6 +106,7 @@ export class ShipwayAdapter implements CourierAdapter {
             return {
                 courierId: this.id,
                 courierName: this.name,
+                source: this.name,
                 price: 0,
                 deliveryDays: 0,
                 available: false,

@@ -66,6 +66,7 @@ const OrderFlow: React.FC<OrderFlowProps> = ({
             ? {
                 courierId: selectedCourierId,
                 courierName,
+                source: 'Manual',
                 price: shippingCharge,
                 deliveryDays: 0,
                 available: true,
