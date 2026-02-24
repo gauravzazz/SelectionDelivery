@@ -9,6 +9,7 @@ import OrdersPage from './components/OrdersPage';
 import MessageManager from './components/MessageManager';
 import ReviewCampaignPage from './components/ReviewCampaignPage';
 import SettingsPage from './components/SettingsPage';
+import OnlinePrintoutOrdersPage from './components/OnlinePrintoutOrdersPage';
 import { useBookContext } from './context/BookContext';
 import {
     fetchDropdownOptions,
@@ -39,7 +40,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'messages' | 'reviews' | 'settings'>('catalog');
+    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'online-printouts' | 'messages' | 'reviews' | 'settings'>('catalog');
     const { cartItemCount } = useBookContext();
 
     // Order flow data passed from CartPage
@@ -225,6 +226,12 @@ function App() {
                         📋
                     </button>
                     <button
+                        className={mode === 'online-printouts' ? 'active' : ''}
+                        onClick={() => setMode('online-printouts')}
+                    >
+                        🌐
+                    </button>
+                    <button
                         className={mode === 'messages' ? 'active' : ''}
                         onClick={() => setMode('messages')}
                     >
@@ -289,12 +296,11 @@ function App() {
                             setOrderAddress({ name: '', phone: '', pincode: '', city: '', state: '', fullAddress: '' });
                             setOrderNotes('');
                             localStorage.removeItem('orderFlowData');
-                            localStorage.removeItem('orderRawText');
-                            localStorage.removeItem('orderAddress');
-                            localStorage.removeItem('orderNotes');
                         }}
                         onCancel={() => setMode('cart')}
                     />
+                ) : mode === 'online-printouts' ? (
+                    <OnlinePrintoutOrdersPage />
                 ) : mode === 'messages' ? (
                     <div className="messages-standalone-container">
                         <MessageManager />

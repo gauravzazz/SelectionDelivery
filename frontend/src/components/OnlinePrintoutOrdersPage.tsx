@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Order, OrderService, OrderSource } from '../api/orderApi';
 import { fetchShippingQuote, QuoteResponse, createShipment } from '../api/shippingApi';
 import CourierModal from './CourierModal';
@@ -9,7 +9,6 @@ const SWIPE_ACTION_WIDTH = 108;
 const SWIPE_OPEN_THRESHOLD = 54;
 const SWIPE_DELETE_THRESHOLD = 144;
 const SWIPE_MAX_OFFSET = 172;
-const ORDER_SOURCES: OrderSource[] = ['pdf2printout', 'onlineprintout.com'];
 
 function getSourceLabel(source?: OrderSource): string {
     if (source === 'pdf2printout') return 'pdf2printout';
@@ -147,7 +146,6 @@ const OnlinePrintoutOrdersPage: React.FC = () => {
     // Manual Confirm State
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
     const [trackForm, setTrackForm] = useState({ trackingId: '', trackingCourier: '', trackingLink: '' });
-    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     const loadOrders = async () => {
         setLoading(true);
@@ -442,11 +440,11 @@ const OnlinePrintoutOrdersPage: React.FC = () => {
                 </div>
             )}
 
-            {drafts.length > 0 && (
+            {onlinePrintouts.length > 0 && (
                 <div className="order-section">
-                    <h4 className="section-label draft-label">Draft Orders ({drafts.length})</h4>
+                    <h4 className="section-label draft-label">Draft Orders ({onlinePrintouts.length})</h4>
                     <div className="draft-swipe-hint">Swipe left on a draft card to delete.</div>
-                    {drafts.map((order) => (
+                    {onlinePrintouts.map((order) => (
                         <SwipeableDraftCard
                             key={order.id}
                             onOpen={() => handleOrderClick(order)}
@@ -526,166 +524,6 @@ const OnlinePrintoutOrdersPage: React.FC = () => {
                             </div>
                         </SwipeableDraftCard>
                     ))}
-                </div>
-            )}
-            <div className="order-section">
-                <h4 className="section-label confirmed-label">
-                    Confirmed Orders ({filteredConfirmed.length}/{confirmed.length})
-                </h4>
-
-                <div className="confirmed-filters glass-panel">
-                    <div className="filter-field">
-                        <label>Pincode</label>
-                        <input
-                            type="text"
-                            placeholder="Filter by pincode"
-                            value={confirmedPincodeFilter}
-                            maxLength={6}
-                            onChange={(e) => setConfirmedPincodeFilter(e.target.value.replace(/\D/g, ''))}
-                        />
-                    </div>
-                    <div className="filter-field">
-                        <label>Order Source</label>
-                        <select
-                            value={confirmedSourceFilter}
-                            onChange={(e) => setConfirmedSourceFilter(e.target.value as 'all' | OrderSource)}
-                        >
-                            <option value="all">All Sources</option>
-                            {ORDER_SOURCES.map((source) => (
-                                <option key={source} value={source}>
-                                    {getSourceLabel(source)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <button
-                        type="button"
-                        className="btn-clear-filters"
-                        onClick={() => {
-                            setConfirmedPincodeFilter('');
-                            setConfirmedSourceFilter('all');
-                        }}
-                    >
-                        Clear
-                    </button>
-                </div>
-
-                <div className="confirmed-totals-row">
-                    <div className="totals-chip glass-panel">
-                        <span>Orders</span>
-                        <strong>{confirmedTotals.count}</strong>
-                    </div>
-                    <div className="totals-chip glass-panel">
-                        <span>Books Total</span>
-                        <strong>₹{Math.round(confirmedTotals.booksTotal)}</strong>
-                    </div>
-                    <div className="totals-chip glass-panel">
-                        <span>Shipping Total</span>
-                        <strong>₹{Math.round(confirmedTotals.shippingTotal)}</strong>
-                    </div>
-                    <div className="totals-chip glass-panel">
-                        <span>Grand Total</span>
-                        <strong>₹{Math.round(confirmedTotals.grandTotal)}</strong>
-                    </div>
-                </div>
-
-                {filteredConfirmed.length === 0 && (
-                    <div className="orders-empty filtered-empty">
-                        No confirmed orders match this filter.
-                    </div>
-                )}
-
-                {filteredConfirmed.map((order) => (
-                    <div key={order.id} className="order-card glass-panel confirmed clickable" onClick={() => handleOrderClick(order)}>
-                        <div className="order-card-header">
-                            <div>
-                                <span className="order-name">{order.address.name || 'No Name'}</span>
-                                <span className="order-date">{formatDate(order.createdAt)}</span>
-                            </div>
-                            <span className="status-badge confirmed">Confirmed</span>
-                        </div>
-
-                        <div className="order-card-body">
-                            <div className="order-detail">
-                                <span>📱 {order.address.phone || '—'}</span>
-                                <span>📍 {order.address.pincode || '—'}</span>
-                            </div>
-                            <div className="order-detail">
-                                <span>{order.items.length} item(s)</span>
-                                <span className="order-total">₹{order.grandTotal}</span>
-                            </div>
-                            <div className="order-detail">
-                                <span>Stage: {order.stage}</span>
-                                <span className={`payment-chip ${order.paymentStatus}`}>{order.paymentStatus}</span>
-                            </div>
-                            <div className="order-detail">
-                                <span>Source</span>
-                                <span className="source-chip">{getSourceLabel(order.orderSource)}</span>
-                            </div>
-                            {order.trackingId && (
-                                <div className="tracking-info">
-                                    <span>🚚 {order.trackingCourier}: <strong>{order.trackingId}</strong></span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="order-card-actions share-row">
-                            <button className="share-btn whatsapp" onClick={(e) => shareWhatsApp(e, generateTrackingMessage(order), order.address.phone)}>
-                                WhatsApp
-                            </button>
-                            <button className="share-btn telegram" onClick={(e) => shareTelegram(e, generateTrackingMessage(order))}>
-                                Telegram
-                            </button>
-                            <button
-                                className="btn-label"
-                                onClick={(e) => handleDownloadLabel(e, order)}
-                                disabled={actionLoading === order.id}
-                            >
-                                {actionLoading === order.id ? '...' : (order.labelUrl ? 'Label ⬇️' : 'Get Label')}
-                            </button>
-                            <button
-                                className="btn-cancel-ship"
-                                onClick={(e) => handleCancelShipment(e, order.id)}
-                                disabled={actionLoading === order.id}
-                            >
-                                {actionLoading === order.id ? '...' : 'Cancel ❌'}
-                            </button>
-                            <button className="btn-delete" onClick={(e) => handleDelete(e, order.id)}>🗑</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            )}
-
-            {sourcePrompt && (
-                <div className="source-modal-overlay" onClick={handleSourcePromptCancel}>
-                    <div className="source-modal glass-panel" onClick={(e) => e.stopPropagation()}>
-                        <h4>Select Order Source</h4>
-                        <p>
-                            Mark source before {sourcePrompt.action === 'ship' ? 'shipping confirmation' : 'order confirmation'}.
-                        </p>
-                        <label className="source-select-field">
-                            <span>Source</span>
-                            <select
-                                value={sourceSelection}
-                                onChange={(e) => setSourceSelection(e.target.value as OrderSource)}
-                            >
-                                {ORDER_SOURCES.map((source) => (
-                                    <option key={source} value={source}>
-                                        {getSourceLabel(source)}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <div className="source-modal-actions">
-                            <button type="button" className="btn-cancel" onClick={handleSourcePromptCancel} disabled={savingSource}>
-                                Cancel
-                            </button>
-                            <button type="button" className="btn-confirm" onClick={handleSourcePromptSave} disabled={savingSource}>
-                                {savingSource ? 'Saving...' : 'Save & Continue'}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             )}
 
