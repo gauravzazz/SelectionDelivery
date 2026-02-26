@@ -271,3 +271,81 @@ ${rawText}
         return parseAddressHeuristic(rawText);
     }
 };
+
+/**
+ * Uses Gemini to generate a beautiful SVG cover page for PDF splitting.
+ * The cover includes abstract modern art and onlineprintout.com in the footer.
+ */
+export const generateCoverImageSvg = async (
+    title?: string,
+): Promise<string> => {
+    const displayTitle = title || 'Document';
+
+    const prompt = `
+Generate a single, self-contained SVG image that will be used as a cover page for a PDF document.
+
+Requirements:
+- Canvas size: exactly 595x842 (A4 portrait in points).
+- Use a modern, premium gradient background (deep navy to dark purple or similar elegant dark palette).
+- Add beautiful abstract geometric shapes (circles, lines, subtle polygons) with soft glows and transparency for a modern premium feel.
+- Display the title "${displayTitle}" centered in the upper-middle area, white bold text, roughly 28px font, font-family 'Helvetica Neue, Arial, sans-serif'.
+- At the very bottom center, add footer text "onlineprintout.com" in a muted light color (e.g., rgba(255,255,255,0.5)), font-size ~14px.
+- The SVG must be valid, self-contained, and NOT reference any external resources.
+- Do NOT include any markdown fences.  Return ONLY the raw SVG starting with <svg and ending with </svg>.
+`.trim();
+
+    if (!API_KEY) {
+        // Return a static fallback SVG if no API key
+        return getFallbackCoverSvg(displayTitle);
+    }
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text().trim();
+
+        // Extract the SVG from the response
+        const svgStart = text.indexOf('<svg');
+        const svgEnd = text.lastIndexOf('</svg>');
+        if (svgStart >= 0 && svgEnd > svgStart) {
+            return text.slice(svgStart, svgEnd + 6);
+        }
+
+        console.warn('Gemini did not return valid SVG, using fallback.');
+        return getFallbackCoverSvg(displayTitle);
+    } catch (error) {
+        console.error('Gemini Cover Generation Error:', error);
+        return getFallbackCoverSvg(displayTitle);
+    }
+};
+
+/** High-quality static fallback SVG cover */
+const getFallbackCoverSvg = (title: string): string => `
+<svg xmlns="http://www.w3.org/2000/svg" width="595" height="842" viewBox="0 0 595 842">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f0c29"/>
+      <stop offset="50%" stop-color="#302b63"/>
+      <stop offset="100%" stop-color="#24243e"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="30%" cy="40%" r="45%">
+      <stop offset="0%" stop-color="rgba(120,80,255,0.25)"/>
+      <stop offset="100%" stop-color="rgba(120,80,255,0)"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="75%" cy="65%" r="40%">
+      <stop offset="0%" stop-color="rgba(0,200,180,0.2)"/>
+      <stop offset="100%" stop-color="rgba(0,200,180,0)"/>
+    </radialGradient>
+  </defs>
+  <rect width="595" height="842" fill="url(#bg)"/>
+  <rect width="595" height="842" fill="url(#glow1)"/>
+  <rect width="595" height="842" fill="url(#glow2)"/>
+  <circle cx="150" cy="300" r="120" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <circle cx="450" cy="550" r="90" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+  <line x1="50" y1="200" x2="545" y2="200" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <line x1="50" y1="650" x2="545" y2="650" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  <polygon points="297,100 370,220 224,220" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+  <text x="297.5" y="400" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff">${title}</text>
+  <text x="297.5" y="810" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.5)">onlineprintout.com</text>
+</svg>
+`.trim();

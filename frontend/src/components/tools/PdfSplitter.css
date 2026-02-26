@@ -1,0 +1,286 @@
+/* ── PDF Splitter Tool Styles ── */
+
+.pdf-splitter {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: var(--sp-lg);
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.pdf-splitter__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: var(--sp-xs);
+}
+
+.pdf-splitter__subtitle {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--sp-xl);
+    line-height: 1.5;
+}
+
+/* ── Drop Zone ── */
+.pdf-splitter__dropzone {
+    position: relative;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-xxl) var(--sp-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--color-bg-card);
+}
+
+.pdf-splitter__dropzone:hover,
+.pdf-splitter__dropzone--active {
+    border-color: var(--color-primary);
+    background: var(--color-bg-card-hover);
+    box-shadow: var(--shadow-glow);
+}
+
+.pdf-splitter__dropzone-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--sp-sm);
+}
+
+.pdf-splitter__dropzone-text {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+}
+
+.pdf-splitter__dropzone-text strong {
+    color: var(--color-primary-light);
+}
+
+.pdf-splitter__dropzone-hint {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin-top: var(--sp-xs);
+}
+
+.pdf-splitter__dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ── File Info Card ── */
+.pdf-splitter__file-info {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-md);
+    margin-top: var(--sp-lg);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.pdf-splitter__file-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.pdf-splitter__file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.pdf-splitter__file-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pdf-splitter__file-meta {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+.pdf-splitter__file-remove {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: var(--sp-xs);
+    border-radius: var(--radius-sm);
+    transition: color 0.2s, background 0.2s;
+}
+
+.pdf-splitter__file-remove:hover {
+    color: #ff6b6b;
+    background: hsla(0, 80%, 60%, 0.1);
+}
+
+/* ── Split Preview ── */
+.pdf-splitter__preview {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-md);
+    margin-top: var(--sp-md);
+    animation: fadeInUp 0.35s ease-out;
+}
+
+.pdf-splitter__preview-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--sp-sm);
+}
+
+.pdf-splitter__chunks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs);
+}
+
+.pdf-splitter__chunk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: hsla(250, 84%, 54%, 0.12);
+    color: var(--color-primary-light);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+/* ── Action Button ── */
+.pdf-splitter__actions {
+    margin-top: var(--sp-lg);
+}
+
+.pdf-splitter__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-xs);
+    width: 100%;
+    padding: 14px var(--sp-lg);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: var(--font-family);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    box-shadow: var(--shadow-btn);
+}
+
+.pdf-splitter__btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px hsla(250, 84%, 54%, 0.45);
+}
+
+.pdf-splitter__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pdf-splitter__btn--processing {
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+    box-shadow: 0 2px 12px hsla(160, 84%, 44%, 0.35);
+}
+
+/* ── Progress ── */
+.pdf-splitter__progress {
+    margin-top: var(--sp-md);
+    animation: fadeInUp 0.25s ease-out;
+}
+
+.pdf-splitter__progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--color-bg-input);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.pdf-splitter__progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.pdf-splitter__progress-label {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    margin-top: var(--sp-xs);
+}
+
+/* ── Done Banner ── */
+.pdf-splitter__done {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    background: var(--color-success-bg);
+    border: 1px solid hsla(160, 84%, 44%, 0.3);
+    border-radius: var(--radius-md);
+    padding: var(--sp-md);
+    margin-top: var(--sp-lg);
+    color: var(--color-success);
+    font-weight: 500;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* ── Error Banner ── */
+.pdf-splitter__error {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    background: hsla(0, 80%, 50%, 0.1);
+    border: 1px solid hsla(0, 80%, 50%, 0.25);
+    border-radius: var(--radius-md);
+    padding: var(--sp-md);
+    margin-top: var(--sp-lg);
+    color: #ff6b6b;
+    font-weight: 500;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* ── Cover Preview ── */
+.pdf-splitter__cover-preview {
+    margin-top: var(--sp-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-md);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.pdf-splitter__cover-preview-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--sp-sm);
+}
+
+.pdf-splitter__cover-svg-wrapper {
+    display: flex;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    max-height: 280px;
+}
+
+.pdf-splitter__cover-svg-wrapper svg {
+    width: 180px;
+    height: auto;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-card);
+}

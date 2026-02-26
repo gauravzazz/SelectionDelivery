@@ -10,6 +10,7 @@ import MessageManager from './components/MessageManager';
 import ReviewCampaignPage from './components/ReviewCampaignPage';
 import SettingsPage from './components/SettingsPage';
 import OnlinePrintoutOrdersPage from './components/OnlinePrintoutOrdersPage';
+import PdfSplitter from './components/tools/PdfSplitter';
 import { useBookContext } from './context/BookContext';
 import {
     fetchDropdownOptions,
@@ -40,7 +41,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'online-printouts' | 'messages' | 'reviews' | 'settings'>('catalog');
+    const [mode, setMode] = useState<'calculator' | 'catalog' | 'cart' | 'order-flow' | 'orders' | 'online-printouts' | 'messages' | 'reviews' | 'pdf-splitter' | 'settings'>('catalog');
     const { cartItemCount } = useBookContext();
 
     // Order flow data passed from CartPage
@@ -238,6 +239,12 @@ function App() {
                         💬
                     </button>
                     <button
+                        className={mode === 'pdf-splitter' ? 'active' : ''}
+                        onClick={() => setMode('pdf-splitter')}
+                    >
+                        ✂️
+                    </button>
+                    <button
                         className={mode === 'settings' ? 'active' : ''}
                         onClick={() => setMode('settings')}
                     >
@@ -307,6 +314,8 @@ function App() {
                     </div>
                 ) : mode === 'reviews' ? (
                     <ReviewCampaignPage />
+                ) : mode === 'pdf-splitter' ? (
+                    <PdfSplitter />
                 ) : mode === 'settings' ? (
                     <SettingsPage />
                 ) : (
